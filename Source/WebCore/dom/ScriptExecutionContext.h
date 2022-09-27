@@ -321,6 +321,8 @@ public:
     WEBCORE_EXPORT NotificationCallbackIdentifier addNotificationCallback(CompletionHandler<void()>&&);
     WEBCORE_EXPORT CompletionHandler<void()> takeNotificationCallback(NotificationCallbackIdentifier);
 
+    virtual Logger& logger() = 0;
+
 protected:
     class AddConsoleMessageTask : public Task {
     public:

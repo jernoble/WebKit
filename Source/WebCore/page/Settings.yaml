@@ -29,6 +29,36 @@ AcceleratedCompositedAnimationsEnabled:
     WebCore:
       default: true
 
+AllowedMediaCaptionFormatTypes:
+  type: 'std::optional<Vector<FourCC>>'
+  defaultValue:
+    WebCore:
+      default: std::nullopt
+
+AllowedMediaContainerTypes:
+  type: 'std::optional<Vector<String>>'
+  defaultValue:
+    WebCore:
+      default: std::nullopt
+
+AllowedMediaCodecTypes:
+  type: 'std::optional<Vector<String>>'
+  defaultValue:
+    WebCore:
+      default: std::nullopt
+
+AllowedMediaAudioCodecIDs:
+  type: 'std::optional<Vector<FourCC>>'
+  defaultValue:
+    WebCore:
+      default: std::nullopt
+
+AllowedMediaVideoCodecIDs:
+  type: 'std::optional<Vector<FourCC>>'
+  defaultValue:
+    WebCore:
+      default: std::nullopt
+
 AnimatedImageDebugCanvasDrawingEnabled:
   type: bool
   defaultValue:
@@ -341,6 +371,12 @@ MaximumSourceBufferSize:
     WebCore:
       default: 318767104
 
+MediaContentTypesRequiringHardwareSupport:
+  type: 'Vector<ContentType>'
+  defaultValue:
+    WebCore:
+      default: '{ }'
+
 MediaDeviceIdentifierStorageDirectory:
   type: String
   condition: ENABLE(MEDIA_STREAM)
@@ -624,3 +660,4 @@ YouTubeFlashPluginReplacementEnabled:
     WebCore:
       PLATFORM(COCOA): true
       default: false
+

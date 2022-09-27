@@ -219,7 +219,7 @@ private:
     std::unique_ptr<PlatformTimeRanges> seekable() const override;
     MediaTime maxMediaTimeSeekable() const override;
     MediaTime minMediaTimeSeekable() const override;
-    std::unique_ptr<PlatformTimeRanges> buffered() const override;
+    std::unique_ptr<PlatformTimeRanges> buffered() const override { return nullptr; }
 
     bool didLoadingProgress() const override;
 

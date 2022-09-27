@@ -90,10 +90,10 @@ class SourceBufferPrivateAVFObjC final
     , public CanMakeWeakPtr<SourceBufferPrivateAVFObjC>
 {
 public:
-    static Ref<SourceBufferPrivateAVFObjC> create(MediaSourcePrivateAVFObjC*, Ref<SourceBufferParser>&&);
+    static Ref<SourceBufferPrivateAVFObjC> create(MediaSourcePrivateAVFObjC&, Ref<SourceBufferParser>&&);
     virtual ~SourceBufferPrivateAVFObjC();
 
-    void clearMediaSource() { m_mediaSource = nullptr; }
+    void clearMediaSource();
 
     void willProvideContentKeyRequestInitializationDataForTrackID(uint64_t trackID);
     void didProvideContentKeyRequestInitializationDataForTrackID(Ref<SharedBuffer>&&, uint64_t trackID, Box<BinarySemaphore>);
@@ -149,7 +149,7 @@ public:
 #endif
 
 private:
-    explicit SourceBufferPrivateAVFObjC(MediaSourcePrivateAVFObjC*, Ref<SourceBufferParser>&&);
+    explicit SourceBufferPrivateAVFObjC(MediaSourcePrivateAVFObjC&, Ref<SourceBufferParser>&&);
 
     using InitializationSegment = SourceBufferPrivateClient::InitializationSegment;
     void didParseInitializationData(InitializationSegment&&);
@@ -161,8 +161,6 @@ private:
     void abort() final;
     void resetParserState() final;
     void removedFromMediaSource() final;
-    MediaPlayer::ReadyState readyState() const final;
-    void setReadyState(MediaPlayer::ReadyState) final;
     void flush(const AtomString& trackID) final;
     void enqueueSample(Ref<MediaSample>&&, const AtomString& trackID) final;
     bool isReadyForMoreSamples(const AtomString& trackID) final;
@@ -225,7 +223,7 @@ private:
     const Ref<WTF::WorkQueue> m_appendQueue;
     RefPtr<WebCoreDecompressionSession> m_decompressionSession;
 
-    MediaSourcePrivateAVFObjC* m_mediaSource;
+    RefPtr<MediaSourcePrivateAVFObjC> m_mediaSource;
     bool m_isActive { false };
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)

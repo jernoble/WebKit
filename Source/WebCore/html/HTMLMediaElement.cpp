@@ -1612,7 +1612,7 @@ void HTMLMediaElement::loadResource(const URL& initialURL, ContentType& contentT
             // while processing remainder of load failure.
             m_mediaSource = nullptr;
             mediaLoadingFailed(MediaPlayer::NetworkState::FormatError);
-        } else if (!m_player->load(url, contentType, *m_mediaSource)) {
+        } else if (!m_player->load(url, contentType, m_mediaSource->client())) {
             // We have to detach the MediaSource before we forget the reference to it.
             m_mediaSource->detachFromElement(*this);
             m_mediaSource = nullptr;
@@ -5500,10 +5500,11 @@ void HTMLMediaElement::mediaPlayerRepaint()
 
 void HTMLMediaElement::mediaPlayerSizeChanged()
 {
-    ALWAYS_LOG(LOGIDENTIFIER);
+    auto naturalSize = m_player->naturalSize();
+    ALWAYS_LOG(LOGIDENTIFIER, naturalSize);
 
     if (is<MediaDocument>(document()) && m_player)
-        downcast<MediaDocument>(document()).mediaElementNaturalSizeChanged(expandedIntSize(m_player->naturalSize()));
+        downcast<MediaDocument>(document()).mediaElementNaturalSizeChanged(expandedIntSize(naturalSize));
 
     beginProcessingMediaPlayerCallback();
     if (m_readyState > HAVE_NOTHING)
@@ -7692,7 +7693,7 @@ double HTMLMediaElement::mediaPlayerRequestedPlaybackRate() const
 
 const Vector<ContentType>& HTMLMediaElement::mediaContentTypesRequiringHardwareSupport() const
 {
-    return document().settings().mediaContentTypesRequiringHardwareSupport();
+    return document().settingsValues().mediaContentTypesRequiringHardwareSupport;
 }
 
 bool HTMLMediaElement::mediaPlayerShouldCheckHardwareSupport() const
@@ -7711,27 +7712,27 @@ bool HTMLMediaElement::mediaPlayerShouldCheckHardwareSupport() const
 
 const std::optional<Vector<String>>& HTMLMediaElement::allowedMediaContainerTypes() const
 {
-    return document().settings().allowedMediaContainerTypes();
+    return document().settingsValues().allowedMediaContainerTypes;
 }
 
 const std::optional<Vector<String>>& HTMLMediaElement::allowedMediaCodecTypes() const
 {
-    return document().settings().allowedMediaCodecTypes();
+    return document().settingsValues().allowedMediaCodecTypes;
 }
 
 const std::optional<Vector<FourCC>>& HTMLMediaElement::allowedMediaVideoCodecIDs() const
 {
-    return document().settings().allowedMediaVideoCodecIDs();
+    return document().settingsValues().allowedMediaVideoCodecIDs;
 }
 
 const std::optional<Vector<FourCC>>& HTMLMediaElement::allowedMediaAudioCodecIDs() const
 {
-    return document().settings().allowedMediaAudioCodecIDs();
+    return document().settingsValues().allowedMediaAudioCodecIDs;
 }
 
 const std::optional<Vector<FourCC>>& HTMLMediaElement::allowedMediaCaptionFormatTypes() const
 {
-    return document().settings().allowedMediaCaptionFormatTypes();
+    return document().settingsValues().allowedMediaCaptionFormatTypes;
 }
 
 void HTMLMediaElement::mediaPlayerBufferedTimeRangesChanged()

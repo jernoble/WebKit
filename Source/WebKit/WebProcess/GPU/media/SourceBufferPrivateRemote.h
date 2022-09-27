@@ -35,6 +35,7 @@
 #include <WebCore/MediaSample.h>
 #include <WebCore/SourceBufferPrivate.h>
 #include <WebCore/SourceBufferPrivateClient.h>
+#include <wtf/CancellableTask.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/MediaTime.h>
 #include <wtf/Ref.h>
@@ -76,8 +77,6 @@ private:
     void abort() final;
     void resetParserState() final;
     void removedFromMediaSource() final;
-    WebCore::MediaPlayer::ReadyState readyState() const final;
-    void setReadyState(WebCore::MediaPlayer::ReadyState) final;
     bool canSwitchToType(const WebCore::ContentType&) final;
     void setMediaSourceEnded(bool) final;
     void setMode(WebCore::SourceBufferAppendMode) final;
@@ -120,6 +119,9 @@ private:
     void sourceBufferPrivateBufferedDirtyChanged(bool dirty);
     void sourceBufferPrivateReportExtraMemoryCost(uint64_t extraMemory);
 
+    void dispatchWorkQueueTask(Function<void()>&&);
+
+    TaskCancellationGroup m_taskGroup;
     WeakPtr<GPUProcessConnection> m_gpuProcessConnection;
     RemoteSourceBufferIdentifier m_remoteSourceBufferIdentifier;
     WeakPtr<MediaSourcePrivateRemote> m_mediaSourcePrivate;

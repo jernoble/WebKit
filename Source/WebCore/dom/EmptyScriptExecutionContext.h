@@ -104,6 +104,15 @@ private:
     NotificationClient* notificationClient() final { return nullptr; }
 #endif
 
+    Logger& logger() final
+    {
+        if (!m_logger) {
+            m_logger = Logger::create(this);
+            m_logger->setEnabled(this, false);
+        }
+        return *m_logger;
+    }
+
     class EmptyEventLoop final : public EventLoop {
     public:
         static Ref<EmptyEventLoop> create(JSC::VM& vm)
@@ -131,6 +140,7 @@ private:
     Ref<EmptyEventLoop> m_eventLoop;
     std::unique_ptr<EventLoopTaskGroup> m_eventLoopTaskGroup;
     Settings::Values m_settingsValues;
+    RefPtr<Logger> m_logger;
 };
 
 } // namespace WebCore

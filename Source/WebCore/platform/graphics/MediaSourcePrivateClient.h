@@ -30,6 +30,7 @@
 #include "PlatformTimeRanges.h"
 #include <wtf/Logger.h>
 #include <wtf/WeakPtr.h>
+#include <wtf/WorkQueue.h>
 
 namespace WebCore {
 
@@ -39,9 +40,9 @@ class MediaSourcePrivateClient : public CanMakeWeakPtr<MediaSourcePrivateClient>
 public:
     virtual ~MediaSourcePrivateClient() = default;
 
+    virtual WorkQueue& workQueue() const = 0;
     virtual void setPrivateAndOpen(Ref<MediaSourcePrivate>&&) = 0;
     virtual MediaTime duration() const = 0;
-    virtual std::unique_ptr<PlatformTimeRanges> buffered() const = 0;
     virtual void seekToTime(const MediaTime&) = 0;
 #if USE(GSTREAMER)
     virtual void monitorSourceBuffers() = 0;

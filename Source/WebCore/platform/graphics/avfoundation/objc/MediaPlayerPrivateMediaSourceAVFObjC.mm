@@ -651,11 +651,6 @@ MediaTime MediaPlayerPrivateMediaSourceAVFObjC::minMediaTimeSeekable() const
     return startTime();
 }
 
-std::unique_ptr<PlatformTimeRanges> MediaPlayerPrivateMediaSourceAVFObjC::buffered() const
-{
-    return m_mediaSourcePrivate ? m_mediaSourcePrivate->buffered() : makeUnique<PlatformTimeRanges>();
-}
-
 bool MediaPlayerPrivateMediaSourceAVFObjC::didLoadingProgress() const
 {
     bool loadingProgressed = m_loadingProgressed;

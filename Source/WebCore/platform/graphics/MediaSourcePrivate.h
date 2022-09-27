@@ -33,21 +33,28 @@
 #if ENABLE(MEDIA_SOURCE)
 
 #include "MediaPlayer.h"
+#include "PlatformTimeRanges.h"
 #include <wtf/Forward.h>
-#include <wtf/RefCounted.h>
+#include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Vector.h>
+#include <wtf/WorkQueue.h>
 
 namespace WebCore {
 
 class ContentType;
 class SourceBufferPrivate;
 
-class MediaSourcePrivate : public RefCounted<MediaSourcePrivate> {
+class MediaSourcePrivate : public ThreadSafeRefCounted<MediaSourcePrivate> {
 public:
     typedef Vector<String> CodecsArray;
 
-    MediaSourcePrivate() = default;
+    MediaSourcePrivate(Ref<WorkQueue>&& workQueue)
+        : m_workQueue(WTFMove(workQueue))
+    {
+    }
     virtual ~MediaSourcePrivate() = default;
+
+    WorkQueue& workQueue() const { return m_workQueue; }
 
     enum class AddStatus : uint8_t {
         Ok,
@@ -56,7 +63,8 @@ public:
     };
     virtual AddStatus addSourceBuffer(const ContentType&, bool webMParserEnabled, RefPtr<SourceBufferPrivate>&) = 0;
     virtual void durationChanged(const MediaTime&) = 0;
-    virtual void bufferedChanged(const PlatformTimeRanges&) { }
+    virtual void bufferedChanged(const PlatformTimeRanges& buffered) { m_buffered = buffered; }
+    virtual const PlatformTimeRanges& buffered() const { return m_buffered; }
     enum EndOfStreamStatus { EosNoError, EosNetworkError, EosDecodeError };
     virtual void markEndOfStream(EndOfStreamStatus) = 0;
     virtual void unmarkEndOfStream() = 0;
@@ -75,6 +83,8 @@ public:
     bool isSeeking() const { return m_isSeeking; }
 
 private:
+    Ref<WorkQueue> m_workQueue;
+    PlatformTimeRanges m_buffered;
     MediaTime m_timeFudgeFactor;
     bool m_isSeeking { false };
 };

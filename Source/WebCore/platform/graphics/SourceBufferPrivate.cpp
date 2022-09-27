@@ -55,8 +55,9 @@ namespace WebCore {
 // FIXME(135867): Make this gap detection logic less arbitrary.
 static const MediaTime discontinuityTolerance = MediaTime(1, 1);
 
-SourceBufferPrivate::SourceBufferPrivate()
-    : m_buffered(TimeRanges::create())
+SourceBufferPrivate::SourceBufferPrivate(Ref<WorkQueue>&& workQueue)
+    : m_workQueue(WTFMove(workQueue))
+    , m_buffered(TimeRanges::create())
 {
 }
 
@@ -378,11 +379,6 @@ void SourceBufferPrivate::removeCodedFrames(const MediaTime& start, const MediaT
         
         setBufferedDirty(true);
 
-        // 3.4 If this object is in activeSourceBuffers, the current playback position is greater than or equal to start
-        // and less than the remove end timestamp, and HTMLMediaElement.readyState is greater than HAVE_METADATA, then set
-        // the HTMLMediaElement.readyState attribute to HAVE_METADATA and stall playback.
-        if (isActive() && currentTime >= start && currentTime < end && readyState() > MediaPlayer::ReadyState::HaveMetadata)
-            setReadyState(MediaPlayer::ReadyState::HaveMetadata);
     }
     
     reenqueueMediaIfNeeded(currentTime);

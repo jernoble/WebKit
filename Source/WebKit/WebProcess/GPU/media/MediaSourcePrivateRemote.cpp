@@ -48,17 +48,14 @@ using namespace WebCore;
 
 Ref<MediaSourcePrivateRemote> MediaSourcePrivateRemote::create(GPUProcessConnection& gpuProcessConnection, RemoteMediaSourceIdentifier identifier, RemoteMediaPlayerMIMETypeCache& mimeTypeCache, const MediaPlayerPrivateRemote& mediaPlayerPrivate, MediaSourcePrivateClient& client)
 {
-    auto mediaSourcePrivate = adoptRef(*new MediaSourcePrivateRemote(gpuProcessConnection, identifier, mimeTypeCache, mediaPlayerPrivate, client));
-    client.setPrivateAndOpen(mediaSourcePrivate.copyRef());
-    return mediaSourcePrivate;
+    return adoptRef(*new MediaSourcePrivateRemote(gpuProcessConnection, identifier, mimeTypeCache, mediaPlayerPrivate, client));
 }
 
 MediaSourcePrivateRemote::MediaSourcePrivateRemote(GPUProcessConnection& gpuProcessConnection, RemoteMediaSourceIdentifier identifier, RemoteMediaPlayerMIMETypeCache& mimeTypeCache, const MediaPlayerPrivateRemote& mediaPlayerPrivate, MediaSourcePrivateClient& client)
-    : m_gpuProcessConnection(gpuProcessConnection)
+    : MediaSourcePrivate(client.workQueue())
     , m_identifier(identifier)
     , m_mimeTypeCache(mimeTypeCache)
     , m_mediaPlayerPrivate(mediaPlayerPrivate)
-    , m_client(client)
 #if !RELEASE_LOG_DISABLED
     , m_logger(m_mediaPlayerPrivate->mediaPlayerLogger())
     , m_logIdentifier(m_mediaPlayerPrivate->mediaPlayerLogIdentifier())
@@ -66,11 +63,18 @@ MediaSourcePrivateRemote::MediaSourcePrivateRemote(GPUProcessConnection& gpuProc
 {
     ALWAYS_LOG(LOGIDENTIFIER);
 
-    m_gpuProcessConnection->messageReceiverMap().addMessageReceiver(Messages::MediaSourcePrivateRemote::messageReceiverName(), m_identifier.toUInt64(), *this);
+    workQueue().dispatchSync([&] () mutable {
+        // Create WeakPtrs on the workQueue, not the calling thread.
+        m_client = client;
+        m_gpuProcessConnection = gpuProcessConnection;
 
+        gpuProcessConnection.messageReceiverMap().addMessageReceiver(Messages::MediaSourcePrivateRemote::messageReceiverName(), m_identifier.toUInt64(), *this);
+
+        client.setPrivateAndOpen(*this);
 #if !RELEASE_LOG_DISABLED
-    client.setLogIdentifier(m_logIdentifier);
+        client.setLogIdentifier(m_logIdentifier);
 #endif
+    });
 }
 
 MediaSourcePrivateRemote::~MediaSourcePrivateRemote()
@@ -119,6 +123,7 @@ void MediaSourcePrivateRemote::durationChanged(const MediaTime& duration)
 
 void MediaSourcePrivateRemote::bufferedChanged(const PlatformTimeRanges& buffered)
 {
+    MediaSourcePrivate::bufferedChanged(buffered);
     if (!m_gpuProcessConnection)
         return;
 
@@ -190,8 +195,15 @@ void MediaSourcePrivateRemote::setTimeFudgeFactor(const MediaTime& fudgeFactor)
 
 void MediaSourcePrivateRemote::seekToTime(const MediaTime& time)
 {
-    if (m_client)
-        m_client->seekToTime(time);
+    dispatchWorkQueueTask([this, time] {
+        if (m_client)
+            m_client->seekToTime(time);
+    });
+}
+
+void MediaSourcePrivateRemote::dispatchWorkQueueTask(Function<void()>&& task)
+{
+    workQueue().dispatch(CancellableTask(m_taskGroup, WTFMove(task)));
 }
 
 #if !RELEASE_LOG_DISABLED

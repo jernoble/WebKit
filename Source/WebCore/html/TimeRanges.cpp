@@ -43,6 +43,11 @@ Ref<TimeRanges> TimeRanges::create(const PlatformTimeRanges& other)
     return adoptRef(*new TimeRanges(other));
 }
 
+Ref<TimeRanges> TimeRanges::create(PlatformTimeRanges&& other)
+{
+    return adoptRef(*new TimeRanges(WTFMove(other)));
+}
+
 TimeRanges::TimeRanges()
 {
 }
@@ -54,6 +59,11 @@ TimeRanges::TimeRanges(double start, double end)
 
 TimeRanges::TimeRanges(const PlatformTimeRanges& other)
     : m_ranges(other)
+{
+}
+
+TimeRanges::TimeRanges(PlatformTimeRanges&& other)
+    : m_ranges(WTFMove(other))
 {
 }
 

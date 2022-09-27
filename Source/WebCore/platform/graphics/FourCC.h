@@ -38,6 +38,8 @@ struct FourCC {
 
     uint32_t value { 0 };
 
+    FourCC isolatedCopy() const { return FourCC { value }; }
+
     template<class Encoder>
     void encode(Encoder& encoder) const
     {

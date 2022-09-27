@@ -35,6 +35,7 @@
 #include <WebCore/MediaSourcePrivate.h>
 #include <WebCore/MediaSourcePrivateClient.h>
 #include <WebCore/SourceBufferPrivate.h>
+#include <wtf/CancellableTask.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
@@ -87,6 +88,9 @@ private:
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) final;
     void seekToTime(const MediaTime&);
 
+    void dispatchWorkQueueTask(Function<void()>&&);
+
+    TaskCancellationGroup m_taskGroup;
     WeakPtr<GPUProcessConnection> m_gpuProcessConnection;
     RemoteMediaSourceIdentifier m_identifier;
     RemoteMediaPlayerMIMETypeCache& m_mimeTypeCache;

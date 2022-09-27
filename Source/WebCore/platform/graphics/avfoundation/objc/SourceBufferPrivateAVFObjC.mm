@@ -326,23 +326,24 @@ static void bufferWasConsumedCallback(CMNotificationCenterRef, const void* liste
         sourceBuffer->bufferWasConsumed();
 }
 
-Ref<SourceBufferPrivateAVFObjC> SourceBufferPrivateAVFObjC::create(MediaSourcePrivateAVFObjC* parent, Ref<SourceBufferParser>&& parser)
+Ref<SourceBufferPrivateAVFObjC> SourceBufferPrivateAVFObjC::create(MediaSourcePrivateAVFObjC& parent, Ref<SourceBufferParser>&& parser)
 {
     return adoptRef(*new SourceBufferPrivateAVFObjC(parent, WTFMove(parser)));
 }
 
-SourceBufferPrivateAVFObjC::SourceBufferPrivateAVFObjC(MediaSourcePrivateAVFObjC* parent, Ref<SourceBufferParser>&& parser)
-    : m_parser(WTFMove(parser))
+SourceBufferPrivateAVFObjC::SourceBufferPrivateAVFObjC(MediaSourcePrivateAVFObjC& parent, Ref<SourceBufferParser>&& parser)
+    : SourceBufferPrivate(parent.workQueue())
+    , m_parser(WTFMove(parser))
     , m_errorListener(adoptNS([[WebAVSampleBufferErrorListener alloc] initWithParent:*this]))
     , m_appendQueue(WorkQueue::create("SourceBufferPrivateAVFObjC data parser queue"))
-    , m_mediaSource(parent)
+    , m_mediaSource(&parent)
 #if ENABLE(ENCRYPTED_MEDIA) && HAVE(AVCONTENTKEYSESSION)
     , m_keyStatusesChangedObserver(makeUniqueRef<Observer<void()>>([this] { keyStatusesChanged(); }))
 #endif
     , m_mapID(nextMapID())
 #if !RELEASE_LOG_DISABLED
-    , m_logger(parent->logger())
-    , m_logIdentifier(parent->nextSourceBufferLogIdentifier())
+    , m_logger(parent.logger())
+    , m_logIdentifier(parent.nextSourceBufferLogIdentifier())
 #endif
 {
     ALWAYS_LOG(LOGIDENTIFIER);
@@ -371,6 +372,11 @@ SourceBufferPrivateAVFObjC::~SourceBufferPrivateAVFObjC()
 
     abort();
     resetParserState();
+}
+
+void SourceBufferPrivateAVFObjC::clearMediaSource()
+{
+    m_mediaSource = nullptr;
 }
 
 void SourceBufferPrivateAVFObjC::didParseInitializationData(InitializationSegment&& segment)
@@ -832,21 +838,6 @@ void SourceBufferPrivateAVFObjC::removedFromMediaSource()
         m_mediaSource->removeSourceBuffer(this);
 }
 
-MediaPlayer::ReadyState SourceBufferPrivateAVFObjC::readyState() const
-{
-    if (auto player = this->player())
-        return player->readyState();
-    return MediaPlayer::ReadyState::HaveNothing;
-}
-
-void SourceBufferPrivateAVFObjC::setReadyState(MediaPlayer::ReadyState readyState)
-{
-    ALWAYS_LOG(LOGIDENTIFIER, readyState);
-
-    if (auto player = this->player())
-        player->setReadyState(readyState);
-}
-
 bool SourceBufferPrivateAVFObjC::hasSelectedVideo() const
 {
     return m_enabledVideoTrackID != notFound;
@@ -915,7 +906,7 @@ void SourceBufferPrivateAVFObjC::trackDidChangeEnabled(AudioTrackPrivate& track,
 #endif
 
             WeakPtr weakThis { *this };
-            [renderer requestMediaDataWhenReadyOnQueue:dispatch_get_main_queue() usingBlock:^{
+            [renderer requestMediaDataWhenReadyOnQueue:workQueue().dispatchQueue() usingBlock:^{
                 if (weakThis)
                     weakThis->didBecomeReadyForMoreSamples(trackID);
             }];
@@ -1469,14 +1460,14 @@ void SourceBufferPrivateAVFObjC::notifyClientWhenReadyForMoreSamples(const AtomS
         }
         if (m_displayLayer) {
             WeakPtr weakThis { *this };
-            [m_displayLayer requestMediaDataWhenReadyOnQueue:dispatch_get_main_queue() usingBlock:^ {
+            [m_displayLayer requestMediaDataWhenReadyOnQueue:workQueue().dispatchQueue() usingBlock:^ {
                 if (weakThis)
                     weakThis->didBecomeReadyForMoreSamples(trackID);
             }];
         }
     } else if (m_audioRenderers.contains(trackID)) {
         WeakPtr weakThis { *this };
-        [m_audioRenderers.get(trackID) requestMediaDataWhenReadyOnQueue:dispatch_get_main_queue() usingBlock:^ {
+        [m_audioRenderers.get(trackID) requestMediaDataWhenReadyOnQueue:workQueue().dispatchQueue() usingBlock:^ {
             if (weakThis)
                 weakThis->didBecomeReadyForMoreSamples(trackID);
         }];
@@ -1562,7 +1553,7 @@ void SourceBufferPrivateAVFObjC::setVideoLayer(AVSampleBufferDisplayLayer* layer
 #endif
 
         WeakPtr weakThis { *this };
-        [m_displayLayer requestMediaDataWhenReadyOnQueue:dispatch_get_main_queue() usingBlock:^ {
+        [m_displayLayer requestMediaDataWhenReadyOnQueue:workQueue().dispatchQueue() usingBlock:^ {
             if (weakThis)
                 weakThis->didBecomeReadyForMoreSamples(m_enabledVideoTrackID);
         }];

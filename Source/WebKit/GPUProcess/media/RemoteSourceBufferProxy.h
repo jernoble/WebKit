@@ -94,7 +94,6 @@ private:
     void resetParserState();
     void removedFromMediaSource();
     void setMediaSourceEnded(bool);
-    void setReadyState(WebCore::MediaPlayer::ReadyState);
     void startChangingType();
     void updateBufferedFromTrackBuffers(bool sourceIsEnded, CompletionHandler<void(WebCore::PlatformTimeRanges&&)>&&);
     using RemoveCodedFramesAsyncReply = Messages::RemoteSourceBufferProxy::RemoveCodedFramesAsyncReply;

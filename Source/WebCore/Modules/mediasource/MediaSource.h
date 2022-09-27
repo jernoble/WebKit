@@ -35,16 +35,22 @@
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
 #include "ExceptionOr.h"
-#include "HTMLMediaElement.h"
-#include "MediaSourcePrivateClient.h"
 #include "URLRegistry.h"
 #include <wtf/LoggerHelper.h>
 #include <wtf/RefCounted.h>
 #include <wtf/WeakPtr.h>
 
+namespace WTF {
+class MediaTime;
+}
+
 namespace WebCore {
 
 class ContentType;
+class HTMLMediaElement;
+class MediaSourceImpl;
+class MediaSourcePrivateClient;
+class PlatformTimeRanges;
 class SourceBuffer;
 class SourceBufferList;
 class SourceBufferPrivate;
@@ -52,7 +58,6 @@ class TimeRanges;
 
 class MediaSource final
     : public RefCounted<MediaSource>
-    , public MediaSourcePrivateClient
     , public ActiveDOMObject
     , public EventTarget
     , public URLRegistrable
@@ -76,37 +81,32 @@ public:
     bool isEnded() const;
     void sourceBufferDidChangeActiveState(SourceBuffer&, bool);
     void sourceBufferDidChangeBufferedDirty(SourceBuffer&, bool);
+    MediaSourcePrivateClient& client();
 
     enum class EndOfStreamError { Network, Decode };
+    ExceptionOr<void> endOfStream(std::optional<EndOfStreamError>);
     void streamEndedWithError(std::optional<EndOfStreamError>);
 
-    MediaTime duration() const final;
-    std::unique_ptr<PlatformTimeRanges> buffered() const final;
+    WTF::MediaTime currentTime() const;
+    WTF::MediaTime duration() const;
+    std::unique_ptr<PlatformTimeRanges> buffered() const;
 
     bool attachToElement(HTMLMediaElement&);
     void detachFromElement(HTMLMediaElement&);
-#if USE(GSTREAMER)
-    void monitorSourceBuffers() final;
-#else
     void monitorSourceBuffers();
-#endif
-    bool isSeeking() const { return m_pendingSeekTime.isValid(); }
     Ref<TimeRanges> seekable();
     ExceptionOr<void> setLiveSeekableRange(double start, double end);
     ExceptionOr<void> clearLiveSeekableRange();
 
     ExceptionOr<void> setDuration(double);
-    ExceptionOr<void> setDurationInternal(const MediaTime&);
-    MediaTime currentTime() const;
+    ExceptionOr<void> setDurationInternal(const WTF::MediaTime&);
 
     enum class ReadyState { Closed, Open, Ended };
-    ReadyState readyState() const { return m_readyState; }
-    ExceptionOr<void> endOfStream(std::optional<EndOfStreamError>);
+    ReadyState readyState() const;
 
-    HTMLMediaElement* mediaElement() const { return m_mediaElement.get(); }
-
-    SourceBufferList* sourceBuffers() { return m_sourceBuffers.get(); }
-    SourceBufferList* activeSourceBuffers() { return m_activeSourceBuffers.get(); }
+    WeakPtr<HTMLMediaElement, WeakPtrImplWithEventTargetData> mediaElement() const;
+    SourceBufferList& sourceBuffers();
+    SourceBufferList& activeSourceBuffers();
     ExceptionOr<Ref<SourceBuffer>> addSourceBuffer(const String& type);
     ExceptionOr<void> removeSourceBuffer(SourceBuffer&);
     static bool isTypeSupported(ScriptExecutionContext&, const String& type);
@@ -116,7 +116,6 @@ public:
     using RefCounted::ref;
     using RefCounted::deref;
 
-    static const MediaTime& currentTimeFudgeFactor();
     static bool contentTypeShouldGenerateTimestamps(const ContentType&);
 
 #if !RELEASE_LOG_DISABLED
@@ -124,61 +123,37 @@ public:
     const void* logIdentifier() const final { return m_logIdentifier; }
     const char* logClassName() const final { return "MediaSource"; }
     WTFLogChannel& logChannel() const final;
-    void setLogIdentifier(const void*) final;
+    void setLogIdentifier(const void*);
 #endif
 
-    void failedToCreateRenderer(RendererType) final;
+    void didReceiveInitializationSegment(bool activeTrackFlag);
+
+    MediaSourceImpl& impl() { return m_impl; }
+    const MediaSourceImpl& impl() const { return m_impl; }
 
 private:
     explicit MediaSource(ScriptExecutionContext&);
 
-    // ActiveDOMObject.
+    // ActiveDOMObject
     void stop() final;
     const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
-    static bool isTypeSupported(ScriptExecutionContext&, const String& type, Vector<ContentType>&& contentTypesRequiringHardwareSupport);
 
-    void setPrivateAndOpen(Ref<MediaSourcePrivate>&&) final;
-    void seekToTime(const MediaTime&) final;
-
+    // EventTarget
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
     EventTargetInterface eventTargetInterface() const final;
 
+    // URLRegistrable
     URLRegistry& registry() const final;
-
-    void setReadyState(ReadyState);
-    void onReadyStateChange(ReadyState oldState, ReadyState newState);
-
-    Vector<PlatformTimeRanges> activeRanges() const;
-
-    ExceptionOr<Ref<SourceBufferPrivate>> createSourceBufferPrivate(const ContentType&);
-    void scheduleEvent(const AtomString& eventName);
-
-    bool hasBufferedTime(const MediaTime&);
-    bool hasCurrentTime();
-    bool hasFutureTime();
-
-    void regenerateActiveSourceBuffers();
-    void updateBufferedIfNeeded();
-
-    void completeSeek();
 
     static URLRegistry* s_registry;
 
-    RefPtr<MediaSourcePrivate> m_private;
-    RefPtr<SourceBufferList> m_sourceBuffers;
-    RefPtr<SourceBufferList> m_activeSourceBuffers;
-    std::unique_ptr<PlatformTimeRanges> m_buffered;
-    std::unique_ptr<PlatformTimeRanges> m_liveSeekable;
-    WeakPtr<HTMLMediaElement, WeakPtrImplWithEventTargetData> m_mediaElement;
-    MediaTime m_duration;
-    MediaTime m_pendingSeekTime;
-    ReadyState m_readyState { ReadyState::Closed };
 #if !RELEASE_LOG_DISABLED
     Ref<const Logger> m_logger;
     const void* m_logIdentifier { nullptr };
 #endif
+    UniqueRef<MediaSourceImpl> m_impl;
     uint64_t m_associatedRegistryCount { 0 };
 };
 

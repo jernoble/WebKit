@@ -203,6 +203,7 @@
 #include "Settings.h"
 #include "ShadowRoot.h"
 #include "SourceBuffer.h"
+#include "SourceBufferImpl.h"
 #include "SpeechSynthesisUtterance.h"
 #include "SpellChecker.h"
 #include "StaticNodeList.h"
@@ -4324,31 +4325,31 @@ void Internals::initializeMockMediaSource()
 
 void Internals::bufferedSamplesForTrackId(SourceBuffer& buffer, const AtomString& trackId, BufferedSamplesPromise&& promise)
 {
-    buffer.bufferedSamplesForTrackId(trackId, [promise = WTFMove(promise)](auto&& samples) mutable {
+    buffer.impl().bufferedSamplesForTrackId(trackId, [promise = WTFMove(promise)](auto&& samples) mutable {
         promise.resolve(WTFMove(samples));
     });
 }
 
 void Internals::enqueuedSamplesForTrackID(SourceBuffer& buffer, const AtomString& trackID, BufferedSamplesPromise&& promise)
 {
-    return buffer.enqueuedSamplesForTrackID(trackID, [promise = WTFMove(promise)](auto&& samples) mutable {
+    return buffer.impl().enqueuedSamplesForTrackID(trackID, [promise = WTFMove(promise)](auto&& samples) mutable {
         promise.resolve(WTFMove(samples));
     });
 }
 
 double Internals::minimumUpcomingPresentationTimeForTrackID(SourceBuffer& buffer, const AtomString& trackID)
 {
-    return buffer.minimumUpcomingPresentationTimeForTrackID(trackID).toDouble();
+    return buffer.impl().minimumUpcomingPresentationTimeForTrackID(trackID).toDouble();
 }
 
 void Internals::setShouldGenerateTimestamps(SourceBuffer& buffer, bool flag)
 {
-    buffer.setShouldGenerateTimestamps(flag);
+    buffer.impl().setShouldGenerateTimestamps(flag);
 }
 
 void Internals::setMaximumQueueDepthForTrackID(SourceBuffer& buffer, const AtomString& trackID, size_t maxQueueDepth)
 {
-    buffer.setMaximumQueueDepthForTrackID(trackID, maxQueueDepth);
+    buffer.impl().setMaximumQueueDepthForTrackID(trackID, maxQueueDepth);
 }
 
 #endif

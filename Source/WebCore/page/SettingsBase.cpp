@@ -187,103 +187,41 @@ void SettingsBase::setMinimumDOMTimerInterval(Seconds interval)
     }
 }
 
-void SettingsBase::setMediaContentTypesRequiringHardwareSupport(const String& contentTypes)
+Vector<ContentType> SettingsBase::splitStringIntoContentTypes(const String& types)
 {
-    m_mediaContentTypesRequiringHardwareSupport.shrink(0);
-    for (auto type : StringView(contentTypes).split(':'))
-        m_mediaContentTypesRequiringHardwareSupport.append(ContentType { type.toString() });
+    Vector<ContentType> newTypes;
+    for (auto type : StringView(types).split(','))
+        newTypes.append(ContentType { type.toString() });
+    return newTypes;
 }
 
-void SettingsBase::setMediaContentTypesRequiringHardwareSupport(const Vector<ContentType>& contentTypes)
+std::optional<Vector<String>> SettingsBase::splitStringIntoCodecTypes(const String& types)
 {
-    m_mediaContentTypesRequiringHardwareSupport = contentTypes;
-}
-
-void SettingsBase::setAllowedMediaContainerTypes(const String& types)
-{
-    if (types.isNull()) {
-        m_allowedMediaContainerTypes = std::nullopt;
-        return;
-    }
+    if (types.isNull())
+        return std::nullopt;
 
     Vector<String> newTypes;
     for (auto type : StringView(types).split(','))
         newTypes.append(type.toString());
-
-    m_allowedMediaContainerTypes = WTFMove(newTypes);
+    return newTypes;
 }
 
-void SettingsBase::setAllowedMediaCodecTypes(const String& types)
+std::optional<Vector<FourCC>> SettingsBase::splitStringIntoFourCCs(const String& types)
 {
-    if (types.isNull()) {
-        m_allowedMediaCodecTypes = std::nullopt;
-        return;
-    }
-
-    Vector<String> newTypes;
-    for (auto type : StringView(types).split(','))
-        newTypes.append(type.toString());
-
-    m_allowedMediaCodecTypes = WTFMove(newTypes);
-}
-
-void SettingsBase::setAllowedMediaVideoCodecIDs(const String& types)
-{
-    if (types.isNull()) {
-        m_allowedMediaVideoCodecIDs = std::nullopt;
-        return;
-    }
+    if (types.isNull())
+        return std::nullopt;
 
     Vector<FourCC> newTypes;
     for (auto type : StringView(types).split(',')) {
         if (auto fourCC = FourCC::fromString(type))
             newTypes.append(WTFMove(*fourCC));
     }
-
-    m_allowedMediaVideoCodecIDs = WTFMove(newTypes);
-}
-
-void SettingsBase::setAllowedMediaAudioCodecIDs(const String& types)
-{
-    if (types.isNull()) {
-        m_allowedMediaAudioCodecIDs = std::nullopt;
-        return;
-    }
-
-    Vector<FourCC> newTypes;
-    for (auto type : StringView(types).split(',')) {
-        if (auto fourCC = FourCC::fromString(type))
-            newTypes.append(WTFMove(*fourCC));
-    }
-
-    m_allowedMediaAudioCodecIDs = WTFMove(newTypes);
-}
-
-void SettingsBase::setAllowedMediaCaptionFormatTypes(const String& types)
-{
-    if (types.isNull()) {
-        m_allowedMediaCaptionFormatTypes = std::nullopt;
-        return;
-    }
-
-    Vector<FourCC> newTypes;
-    for (auto type : StringView(types).split(',')) {
-        if (auto fourCC = FourCC::fromString(type))
-            newTypes.append(WTFMove(*fourCC));
-    }
-
-    m_allowedMediaCaptionFormatTypes = WTFMove(newTypes);
+    return newTypes;
 }
 
 void SettingsBase::resetToConsistentState()
 {
     m_minimumDOMTimerInterval = DOMTimer::defaultMinimumInterval();
-
-    setAllowedMediaContainerTypes(std::nullopt);
-    setAllowedMediaCodecTypes(std::nullopt);
-    setAllowedMediaVideoCodecIDs(std::nullopt);
-    setAllowedMediaAudioCodecIDs(std::nullopt);
-    setAllowedMediaCaptionFormatTypes(std::nullopt);
 
 #if ENABLE(TEXT_AUTOSIZING)
     m_oneLineTextMultiplierCoefficient = defaultOneLineTextMultiplierCoefficient;

@@ -43,10 +43,12 @@
 #include <wtf/HashMap.h>
 #include <wtf/Logger.h>
 #include <wtf/LoggerHelper.h>
+#include <wtf/MediaTime.h>
 #include <wtf/Ref.h>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/WeakPtr.h>
+#include <wtf/WorkQueue.h>
 #include <wtf/text/AtomStringHash.h>
 
 namespace WebCore {
@@ -67,7 +69,7 @@ class SourceBufferPrivate
 #endif
 {
 public:
-    WEBCORE_EXPORT SourceBufferPrivate();
+    WEBCORE_EXPORT SourceBufferPrivate(Ref<WorkQueue>&&);
     WEBCORE_EXPORT virtual ~SourceBufferPrivate();
 
     virtual void setActive(bool) = 0;
@@ -75,8 +77,6 @@ public:
     virtual void abort() = 0;
     virtual void resetParserState() = 0;
     virtual void removedFromMediaSource() = 0;
-    virtual MediaPlayer::ReadyState readyState() const = 0;
-    virtual void setReadyState(MediaPlayer::ReadyState) = 0;
 
     virtual bool canSwitchToType(const ContentType&) { return false; }
 
@@ -129,6 +129,8 @@ public:
     virtual const void* sourceBufferLogIdentifier() = 0;
 #endif
 
+    WorkQueue& workQueue() const { return m_workQueue; }
+
 protected:
     // The following method should never be called directly and be overridden instead.
     WEBCORE_EXPORT virtual void append(Vector<unsigned char>&&);
@@ -164,6 +166,8 @@ private:
     void provideMediaData(TrackBuffer&, const AtomString& trackID);
     void setBufferedDirty(bool);
     void trySignalAllSamplesInTrackEnqueued(TrackBuffer&, const AtomString& trackID);
+
+    Ref<WorkQueue> m_workQueue;
 
     bool m_isAttached { false };
     bool m_hasAudio { false };

@@ -52,7 +52,6 @@ public:
     bool hasVideo() const;
 
     MediaTime duration();
-    std::unique_ptr<PlatformTimeRanges> buffered();
 
     MockMediaPlayerMediaSource& player() const { return m_player; }
 

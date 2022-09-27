@@ -117,16 +117,17 @@ private:
     MockTrackBox m_box;
 };
 
-Ref<MockSourceBufferPrivate> MockSourceBufferPrivate::create(MockMediaSourcePrivate* parent)
+Ref<MockSourceBufferPrivate> MockSourceBufferPrivate::create(MockMediaSourcePrivate& parent)
 {
     return adoptRef(*new MockSourceBufferPrivate(parent));
 }
 
-MockSourceBufferPrivate::MockSourceBufferPrivate(MockMediaSourcePrivate* parent)
-    : m_mediaSource(parent)
+MockSourceBufferPrivate::MockSourceBufferPrivate(MockMediaSourcePrivate& parent)
+    : SourceBufferPrivate(parent.workQueue())
+    , m_mediaSource(&parent)
 #if !RELEASE_LOG_DISABLED
-    , m_logger(parent->logger())
-    , m_logIdentifier(parent->nextSourceBufferLogIdentifier())
+    , m_logger(parent.logger())
+    , m_logIdentifier(parent.nextSourceBufferLogIdentifier())
 #endif
 {
 }
@@ -216,17 +217,6 @@ void MockSourceBufferPrivate::removedFromMediaSource()
 {
     if (m_mediaSource)
         m_mediaSource->removeSourceBuffer(this);
-}
-
-MediaPlayer::ReadyState MockSourceBufferPrivate::readyState() const
-{
-    return m_mediaSource ? m_mediaSource->player().readyState() : MediaPlayer::ReadyState::HaveNothing;
-}
-
-void MockSourceBufferPrivate::setReadyState(MediaPlayer::ReadyState readyState)
-{
-    if (m_mediaSource)
-        m_mediaSource->player().setReadyState(readyState);
 }
 
 void MockSourceBufferPrivate::setActive(bool isActive)

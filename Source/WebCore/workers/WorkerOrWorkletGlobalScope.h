@@ -95,6 +95,7 @@ private:
     void disableWebAssembly(const String& errorMessage) final;
     void refScriptExecutionContext() final { ref(); }
     void derefScriptExecutionContext() final { deref(); }
+    Logger& logger() final;
 
     // EventTarget.
     ScriptExecutionContext* scriptExecutionContext() const final { return const_cast<WorkerOrWorkletGlobalScope*>(this); }
@@ -114,6 +115,7 @@ private:
     PAL::SessionID m_sessionID;
     ReferrerPolicy m_referrerPolicy;
     bool m_isClosing { false };
+    RefPtr<Logger> m_logger;
 };
 
 } // namespace WebCore

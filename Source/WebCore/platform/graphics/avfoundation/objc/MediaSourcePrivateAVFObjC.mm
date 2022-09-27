@@ -54,7 +54,8 @@ Ref<MediaSourcePrivateAVFObjC> MediaSourcePrivateAVFObjC::create(MediaPlayerPriv
 }
 
 MediaSourcePrivateAVFObjC::MediaSourcePrivateAVFObjC(MediaPlayerPrivateMediaSourceAVFObjC& parent, MediaSourcePrivateClient& client)
-    : m_player(parent)
+    : MediaSourcePrivate(client.workQueue())
+    , m_player(parent)
     , m_client(client)
     , m_isEnded(false)
 #if !RELEASE_LOG_DISABLED
@@ -93,7 +94,7 @@ MediaSourcePrivate::AddStatus MediaSourcePrivateAVFObjC::addSourceBuffer(const C
     parser->setLogger(m_logger, m_logIdentifier);
 #endif
 
-    auto newSourceBuffer = SourceBufferPrivateAVFObjC::create(this, parser.releaseNonNull());
+    auto newSourceBuffer = SourceBufferPrivateAVFObjC::create(*this, parser.releaseNonNull());
 #if ENABLE(ENCRYPTED_MEDIA)
     newSourceBuffer->setCDMInstance(m_cdmInstance.get());
 #endif
@@ -124,20 +125,12 @@ void MediaSourcePrivateAVFObjC::removeSourceBuffer(SourceBufferPrivate* buffer)
 
 MediaTime MediaSourcePrivateAVFObjC::duration() const
 {
-    if (m_client)
-        return m_client->duration();
-    return MediaTime::invalidTime();
+    return m_duration;
 }
 
-std::unique_ptr<PlatformTimeRanges> MediaSourcePrivateAVFObjC::buffered()
+void MediaSourcePrivateAVFObjC::durationChanged(const MediaTime& duration)
 {
-    if (m_client)
-        return m_client->buffered();
-    return nullptr;
-}
-
-void MediaSourcePrivateAVFObjC::durationChanged(const MediaTime&)
-{
+    m_duration = duration;
     if (m_player)
         m_player->durationChanged();
 }

@@ -4755,8 +4755,8 @@ ScrollingNodeID RenderLayerCompositor::updateScrollingNodeForViewportConstrained
     auto nodeType = ScrollingNodeType::Fixed;
     if (layer.renderer().style().position() == PositionType::Sticky)
         nodeType = ScrollingNodeType::Sticky;
-    else
-        ASSERT(layer.renderer().isFixedPositioned());
+//    else
+//        ASSERT(layer.renderer().isFixedPositioned());
 
     auto newNodeID = attachScrollingNode(layer, nodeType, treeState);
     if (!newNodeID) {

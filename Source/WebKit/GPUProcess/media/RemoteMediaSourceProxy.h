@@ -62,9 +62,9 @@ public:
     virtual ~RemoteMediaSourceProxy();
 
     // MediaSourcePrivateClient overrides
+    WorkQueue& workQueue() const final { return WorkQueue::main(); }
     void setPrivateAndOpen(Ref<WebCore::MediaSourcePrivate>&&) final;
     MediaTime duration() const final;
-    std::unique_ptr<WebCore::PlatformTimeRanges> buffered() const final;
     void seekToTime(const MediaTime&) final;
 #if USE(GSTREAMER)
     void monitorSourceBuffers() final;

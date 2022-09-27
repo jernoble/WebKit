@@ -49,6 +49,8 @@ public:
 
     WEBCORE_EXPORT String toJSONString() const;
 
+    ContentType isolatedCopy() const { return ContentType { m_type.isolatedCopy() }; }
+
     template<class Encoder>
     void encode(Encoder& encoder) const
     {

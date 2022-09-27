@@ -129,4 +129,16 @@ void WorkerOrWorkletGlobalScope::postTaskForMode(Task&& task, const String& mode
     workerOrWorkletThread()->runLoop().postTaskForMode(WTFMove(task), mode);
 }
 
+Logger& WorkerOrWorkletGlobalScope::logger()
+{
+    if (!m_logger) {
+        m_logger = Logger::create(this);
+        m_logger->setEnabled(this, m_sessionID.isAlwaysOnLoggingAllowed());
+        postTaskToResponsibleDocument([logger = m_logger] (Document& document) {
+            logger->addObserver(document);
+        });
+    }
+    return *m_logger;
+}
+
 } // namespace WebCore

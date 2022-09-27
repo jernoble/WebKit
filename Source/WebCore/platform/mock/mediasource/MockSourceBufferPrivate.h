@@ -41,21 +41,19 @@ class VideoTrackPrivate;
 
 class MockSourceBufferPrivate final : public SourceBufferPrivate {
 public:
-    static Ref<MockSourceBufferPrivate> create(MockMediaSourcePrivate*);
+    static Ref<MockSourceBufferPrivate> create(MockMediaSourcePrivate&);
     virtual ~MockSourceBufferPrivate();
 
     void clearMediaSource() { m_mediaSource = nullptr; }
 
 private:
-    explicit MockSourceBufferPrivate(MockMediaSourcePrivate*);
+    explicit MockSourceBufferPrivate(MockMediaSourcePrivate&);
 
     // SourceBufferPrivate overrides
     void append(Vector<uint8_t>&&) final;
     void abort() final;
     void resetParserState() final;
     void removedFromMediaSource() final;
-    MediaPlayer::ReadyState readyState() const final;
-    void setReadyState(MediaPlayer::ReadyState) final;
     bool canSetMinimumUpcomingPresentationTime(const AtomString&) const final;
     void setMinimumUpcomingPresentationTime(const AtomString&, const MediaTime&) final;
     void clearMinimumUpcomingPresentationTime(const AtomString&) final;
@@ -87,7 +85,7 @@ private:
     const void* sourceBufferLogIdentifier() final { return logIdentifier(); }
 #endif
 
-    MockMediaSourcePrivate* m_mediaSource;
+    RefPtr<MockMediaSourcePrivate> m_mediaSource;
     bool m_isActive { false };
     MediaTime m_minimumUpcomingPresentationTime;
     Vector<String> m_enqueuedSamples;

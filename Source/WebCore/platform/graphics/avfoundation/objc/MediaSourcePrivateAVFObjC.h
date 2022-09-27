@@ -77,7 +77,6 @@ public:
     void seekCompleted() override;
 
     MediaTime duration() const;
-    std::unique_ptr<PlatformTimeRanges> buffered();
 
     bool hasAudio() const;
     bool hasVideo() const;
@@ -133,6 +132,7 @@ private:
 
     friend class SourceBufferPrivateAVFObjC;
 
+    MediaTime m_duration;
     WeakPtr<MediaPlayerPrivateMediaSourceAVFObjC> m_player;
     WeakPtr<MediaSourcePrivateClient> m_client;
     Vector<RefPtr<SourceBufferPrivateAVFObjC>> m_sourceBuffers;

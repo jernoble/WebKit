@@ -952,7 +952,7 @@ size_t MediaElementSession::maximumMediaSourceBufferSize(const SourceBuffer& buf
     const float bufferBudgetPercentageForVideo = .95;
     const float bufferBudgetPercentageForAudio = .05;
 
-    size_t maximum = buffer.document().settings().maximumSourceBufferSize();
+    size_t maximum = m_element.document().settings().maximumSourceBufferSize();
 
     // Allow a SourceBuffer to buffer as though it is audio-only even if it doesn't have any active tracks (yet).
     size_t bufferSize = static_cast<size_t>(maximum * bufferBudgetPercentageForAudio);

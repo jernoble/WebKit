@@ -44,7 +44,8 @@ Ref<MockMediaSourcePrivate> MockMediaSourcePrivate::create(MockMediaPlayerMediaS
 }
 
 MockMediaSourcePrivate::MockMediaSourcePrivate(MockMediaPlayerMediaSource& parent, MediaSourcePrivateClient& client)
-    : m_player(parent)
+    : MediaSourcePrivate(client.workQueue())
+    , m_player(parent)
     , m_client(client)
 #if !RELEASE_LOG_DISABLED
     , m_logger(m_player.mediaPlayerLogger())
@@ -70,7 +71,7 @@ MediaSourcePrivate::AddStatus MockMediaSourcePrivate::addSourceBuffer(const Cont
     if (MockMediaPlayerMediaSource::supportsType(parameters) == MediaPlayer::SupportsType::IsNotSupported)
         return AddStatus::NotSupported;
 
-    m_sourceBuffers.append(MockSourceBufferPrivate::create(this));
+    m_sourceBuffers.append(MockSourceBufferPrivate::create(*this));
     outPrivate = m_sourceBuffers.last();
 
     return AddStatus::Ok;
@@ -88,13 +89,6 @@ MediaTime MockMediaSourcePrivate::duration()
     if (m_client)
         return m_client->duration();
     return MediaTime::invalidTime();
-}
-
-std::unique_ptr<PlatformTimeRanges> MockMediaSourcePrivate::buffered()
-{
-    if (m_client)
-        return m_client->buffered();
-    return nullptr;
 }
 
 void MockMediaSourcePrivate::durationChanged(const MediaTime&)

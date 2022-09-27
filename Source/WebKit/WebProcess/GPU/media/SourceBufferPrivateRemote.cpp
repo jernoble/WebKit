@@ -55,7 +55,8 @@ Ref<SourceBufferPrivateRemote> SourceBufferPrivateRemote::create(GPUProcessConne
 }
 
 SourceBufferPrivateRemote::SourceBufferPrivateRemote(GPUProcessConnection& gpuProcessConnection, RemoteSourceBufferIdentifier remoteSourceBufferIdentifier, const MediaSourcePrivateRemote& mediaSourcePrivate, const MediaPlayerPrivateRemote& mediaPlayerPrivate)
-    : m_gpuProcessConnection(gpuProcessConnection)
+    : SourceBufferPrivate(mediaSourcePrivate.workQueue())
+    , m_gpuProcessConnection(gpuProcessConnection)
     , m_remoteSourceBufferIdentifier(remoteSourceBufferIdentifier)
     , m_mediaSourcePrivate(mediaSourcePrivate)
     , m_mediaPlayerPrivate(mediaPlayerPrivate)
@@ -71,7 +72,6 @@ SourceBufferPrivateRemote::SourceBufferPrivateRemote(GPUProcessConnection& gpuPr
 SourceBufferPrivateRemote::~SourceBufferPrivateRemote()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
-    ASSERT(!m_client);
 
     if (!m_gpuProcessConnection)
         return;
@@ -116,25 +116,6 @@ void SourceBufferPrivateRemote::removedFromMediaSource()
         return;
 
     m_gpuProcessConnection->connection().send(Messages::RemoteSourceBufferProxy::RemovedFromMediaSource(), m_remoteSourceBufferIdentifier);
-}
-
-MediaPlayer::ReadyState SourceBufferPrivateRemote::readyState() const
-{
-    return m_mediaPlayerPrivate ? m_mediaPlayerPrivate->readyState() : MediaPlayer::ReadyState::HaveNothing;
-}
-
-void SourceBufferPrivateRemote::setReadyState(MediaPlayer::ReadyState state)
-{
-    if (!m_mediaSourcePrivate)
-        return;
-
-    if (m_mediaPlayerPrivate)
-        m_mediaPlayerPrivate->setReadyState(state);
-
-    if (!m_gpuProcessConnection)
-        return;
-
-    m_gpuProcessConnection->connection().send(Messages::RemoteSourceBufferProxy::SetReadyState(state), m_remoteSourceBufferIdentifier);
 }
 
 void SourceBufferPrivateRemote::setActive(bool active)
@@ -366,7 +347,7 @@ void SourceBufferPrivateRemote::enqueuedSamplesForTrackID(const AtomString& trac
 
 void SourceBufferPrivateRemote::sourceBufferPrivateDidReceiveInitializationSegment(InitializationSegmentInfo&& segmentInfo, CompletionHandler<void(WebCore::SourceBufferPrivateClient::ReceiveResult)>&& completionHandler)
 {
-    if (!m_client || !m_mediaPlayerPrivate) {
+    if (!m_mediaPlayerPrivate) {
         completionHandler(WebCore::SourceBufferPrivateClient::ReceiveResult::ClientDisconnected);
         return;
     }
@@ -402,76 +383,104 @@ void SourceBufferPrivateRemote::sourceBufferPrivateDidReceiveInitializationSegme
         m_trackIdentifierMap.add(info.track->id(), textTrack.identifier);
     }
 
-    m_client->sourceBufferPrivateDidReceiveInitializationSegment(WTFMove(segment), WTFMove(completionHandler));
+    dispatchWorkQueueTask([this, segment = WTFMove(segment), completionHandler = WTFMove(completionHandler)] () mutable {
+        if (m_client)
+            m_client->sourceBufferPrivateDidReceiveInitializationSegment(WTFMove(segment), WTFMove(completionHandler));
+    });
 }
 
 void SourceBufferPrivateRemote::sourceBufferPrivateStreamEndedWithDecodeError()
 {
-    if (m_client)
-        m_client->sourceBufferPrivateStreamEndedWithDecodeError();
+    dispatchWorkQueueTask([this] {
+        if (m_client)
+            m_client->sourceBufferPrivateStreamEndedWithDecodeError();
+    });
 }
 
 void SourceBufferPrivateRemote::sourceBufferPrivateAppendError(bool decodeError)
 {
-    if (m_client)
-        m_client->sourceBufferPrivateAppendError(decodeError);
+    dispatchWorkQueueTask([this, decodeError] {
+        if (m_client)
+            m_client->sourceBufferPrivateAppendError(decodeError);
+    });
 }
 
 void SourceBufferPrivateRemote::sourceBufferPrivateAppendComplete(SourceBufferPrivateClient::AppendResult appendResult, const PlatformTimeRanges& buffered, uint64_t totalTrackBufferSizeInBytes, const MediaTime& timestampOffset)
 {
     setBufferedRanges(buffered);
     m_totalTrackBufferSizeInBytes = totalTrackBufferSizeInBytes;
-    if (m_client) {
-        setTimestampOffset(timestampOffset);
-        m_client->sourceBufferPrivateAppendComplete(appendResult);
-    }
+    dispatchWorkQueueTask([this, appendResult, timestampOffset = timestampOffset] {
+        if (m_client) {
+            setTimestampOffset(timestampOffset);
+            m_client->sourceBufferPrivateAppendComplete(appendResult);
+        }
+    });
 }
 
 void SourceBufferPrivateRemote::sourceBufferPrivateHighestPresentationTimestampChanged(const MediaTime& timestamp)
 {
-    if (m_client)
-        m_client->sourceBufferPrivateHighestPresentationTimestampChanged(timestamp);
+    dispatchWorkQueueTask([this, timestamp = timestamp] {
+        if (m_client)
+            m_client->sourceBufferPrivateHighestPresentationTimestampChanged(timestamp);
+    });
 }
 
 void SourceBufferPrivateRemote::sourceBufferPrivateDurationChanged(const MediaTime& duration)
 {
-    if (m_client)
-        m_client->sourceBufferPrivateDurationChanged(duration);
+    dispatchWorkQueueTask([this, duration = duration] {
+        if (m_client)
+            m_client->sourceBufferPrivateDurationChanged(duration);
+    });
 }
 
 void SourceBufferPrivateRemote::sourceBufferPrivateDidParseSample(double sampleDuration)
 {
-    if (m_client)
-        m_client->sourceBufferPrivateDidParseSample(sampleDuration);
+    dispatchWorkQueueTask([this, sampleDuration] {
+        if (m_client)
+            m_client->sourceBufferPrivateDidParseSample(sampleDuration);
+    });
 }
 
 void SourceBufferPrivateRemote::sourceBufferPrivateDidDropSample()
 {
-    if (m_client)
-        m_client->sourceBufferPrivateDidDropSample();
+    dispatchWorkQueueTask([this] {
+        if (m_client)
+            m_client->sourceBufferPrivateDidDropSample();
+    });
 }
 
 void SourceBufferPrivateRemote::sourceBufferPrivateBufferedDirtyChanged(bool dirty)
 {
-    if (m_client)
-        m_client->sourceBufferPrivateBufferedDirtyChanged(dirty);
+    dispatchWorkQueueTask([this, dirty] {
+        if (m_client)
+            m_client->sourceBufferPrivateBufferedDirtyChanged(dirty);
+    });
 }
 
 void SourceBufferPrivateRemote::sourceBufferPrivateDidReceiveRenderingError(int64_t errorCode)
 {
-    if (m_client)
-        m_client->sourceBufferPrivateDidReceiveRenderingError(errorCode);
+    dispatchWorkQueueTask([this, errorCode] {
+        if (m_client)
+            m_client->sourceBufferPrivateDidReceiveRenderingError(errorCode);
+    });
 }
 
 void SourceBufferPrivateRemote::sourceBufferPrivateReportExtraMemoryCost(uint64_t extraMemory)
 {
-    if (m_client)
-        m_client->sourceBufferPrivateReportExtraMemoryCost(extraMemory);
+    dispatchWorkQueueTask([this, extraMemory] {
+        if (m_client)
+            m_client->sourceBufferPrivateReportExtraMemoryCost(extraMemory);
+    });
 }
 
 uint64_t SourceBufferPrivateRemote::totalTrackBufferSizeInBytes() const
 {
     return m_totalTrackBufferSizeInBytes;
+}
+
+void SourceBufferPrivateRemote::dispatchWorkQueueTask(Function<void()>&& task)
+{
+    workQueue().dispatch(CancellableTask(m_taskGroup, WTFMove(task)));
 }
 
 #if !RELEASE_LOG_DISABLED

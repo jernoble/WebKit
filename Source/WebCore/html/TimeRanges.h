@@ -35,6 +35,7 @@ public:
     WEBCORE_EXPORT static Ref<TimeRanges> create();
     WEBCORE_EXPORT static Ref<TimeRanges> create(double start, double end);
     static Ref<TimeRanges> create(const PlatformTimeRanges&);
+    static Ref<TimeRanges> create(PlatformTimeRanges&&);
 
     WEBCORE_EXPORT ExceptionOr<double> start(unsigned index) const;
     WEBCORE_EXPORT ExceptionOr<double> end(unsigned index) const;
@@ -60,6 +61,7 @@ private:
     WEBCORE_EXPORT TimeRanges();
     WEBCORE_EXPORT TimeRanges(double start, double end);
     explicit TimeRanges(const PlatformTimeRanges&);
+    explicit TimeRanges(PlatformTimeRanges&&);
 
     PlatformTimeRanges m_ranges;
 };
