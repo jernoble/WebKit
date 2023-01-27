@@ -6957,6 +6957,12 @@ bool HTMLMediaElement::isVideoLayerInline()
 
 #endif
 
+void HTMLMediaElement::setVideoInlineSizeFenced(const FloatSize& size, const WTF::MachSendRight& fence)
+{
+    if (m_player)
+        m_player->setVideoInlineSizeFenced(size, fence);
+}
+
 bool HTMLMediaElement::hasClosedCaptions() const
 {
     if (m_player && m_player->hasClosedCaptions())
@@ -8435,6 +8441,16 @@ bool HTMLMediaElement::shouldOverridePauseDuringRouteChange() const
 #else
     return false;
 #endif
+}
+
+LayerHostingContextID HTMLMediaElement::layerHostingContextID()
+{
+    return m_player->hostingContextID();
+}
+
+FloatSize HTMLMediaElement::naturalSize()
+{
+    return m_player->naturalSize();
 }
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)

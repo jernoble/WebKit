@@ -29,6 +29,7 @@
 
 #include "HTMLMediaElementEnums.h"
 #include "MediaPlayerIdentifier.h"
+#include "PlatformLayer.h"
 #include "PlaybackSessionInterfaceMac.h"
 #include "PlaybackSessionModel.h"
 #include "VideoFullscreenModel.h"
@@ -73,6 +74,7 @@ public:
     WEBCORE_EXPORT void videoDimensionsChanged(const FloatSize&) final;
     void setPlayerIdentifier(std::optional<MediaPlayerIdentifier> identifier) final { m_playerIdentifier = identifier; }
 
+    WEBCORE_EXPORT PlatformLayerContainer createLayer(const FloatRect& initialRect);
     WEBCORE_EXPORT void setupFullscreen(NSView& layerHostedView, const IntRect& initialRect, NSWindow *parentWindow, HTMLMediaElementEnums::VideoFullscreenMode, bool allowsPictureInPicturePlayback);
     WEBCORE_EXPORT void enterFullscreen();
     WEBCORE_EXPORT bool exitFullscreen(const IntRect& finalRect, NSWindow *parentWindow);

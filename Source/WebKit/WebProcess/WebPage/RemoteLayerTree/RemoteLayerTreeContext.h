@@ -29,8 +29,10 @@
 #include "RemoteLayerBackingStoreCollection.h"
 #include "RemoteLayerTreeTransaction.h"
 #include <WebCore/GraphicsLayerFactory.h>
+#include <WebCore/HTMLMediaElementIdentifier.h>
 #include <WebCore/LayerPool.h>
 #include <WebCore/PlatformCALayer.h>
+#include <WebCore/FloatSize.h>
 #include <wtf/Vector.h>
 
 namespace WebKit {
@@ -47,6 +49,7 @@ public:
     ~RemoteLayerTreeContext();
 
     void layerDidEnterContext(PlatformCALayerRemote&, WebCore::PlatformCALayer::LayerType);
+    void layerDidEnterContext(PlatformCALayerRemote&, WebCore::PlatformCALayer::LayerType, WebCore::HTMLVideoElement&);
     void layerWillLeaveContext(PlatformCALayerRemote&);
 
     void graphicsLayerDidEnterContext(GraphicsLayerCARemote&);
@@ -90,6 +93,8 @@ public:
 #if PLATFORM(IOS_FAMILY)
     bool canShowWhileLocked() const;
 #endif
+
+    WebPage& webPage() { return m_webPage; }
 
 private:
     // WebCore::GraphicsLayerFactory

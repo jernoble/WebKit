@@ -518,6 +518,7 @@ void RemoteLayerBackingStore::drawInContext(GraphicsContext& context, WTF::Funct
 #if ENABLE(MODEL_ELEMENT)
     case PlatformCALayer::LayerTypeModelLayer:
 #endif
+    case PlatformCALayer::LayerTypeRemoteHostingTransportLayer:
     case PlatformCALayer::LayerTypeCustom:
         ASSERT_NOT_REACHED();
         break;

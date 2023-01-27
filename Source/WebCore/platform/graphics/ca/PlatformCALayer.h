@@ -87,6 +87,7 @@ public:
 #if ENABLE(MODEL_ELEMENT)
         LayerTypeModelLayer,
 #endif
+        LayerTypeRemoteHostingTransportLayer,
         LayerTypeCustom,
     };
     enum FilterType { Linear, Nearest, Trilinear };
@@ -373,6 +374,7 @@ template<> struct EnumTraits<WebCore::PlatformCALayer::LayerType> {
 #if ENABLE(MODEL_ELEMENT)
         WebCore::PlatformCALayer::LayerType::LayerTypeModelLayer,
 #endif
+        WebCore::PlatformCALayer::LayerType::LayerTypeRemoteHostingTransportLayer,
         WebCore::PlatformCALayer::LayerType::LayerTypeCustom
     >;
 };

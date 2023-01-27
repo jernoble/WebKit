@@ -67,16 +67,12 @@ std::unique_ptr<RemoteLayerTreeNode> RemoteLayerTreeHost::makeNode(const RemoteL
     case PlatformCALayer::LayerTypeTransformLayer:
         return makeWithView(adoptNS([[WKTransformView alloc] init]));
 
+    case PlatformCALayer::LayerTypeRemoteHostingTransportLayer:
     case PlatformCALayer::LayerTypeCustom:
     case PlatformCALayer::LayerTypeAVPlayerLayer:
         if (!m_isDebugLayerTreeHost) {
             auto view = adoptNS([[WKUIRemoteView alloc] initWithFrame:CGRectZero
                 pid:m_drawingArea->page().processIdentifier() contextID:properties.hostingContextID]);
-            if (properties.type == PlatformCALayer::LayerTypeAVPlayerLayer) {
-                // Invert the scale transform added in the WebProcess to fix <rdar://problem/18316542>.
-                float inverseScale = 1 / properties.hostingDeviceScaleFactor;
-                [[view layer] setTransform:CATransform3DMakeScale(inverseScale, inverseScale, 1)];
-            }
             return makeWithView(WTFMove(view));
         }
         return makeWithView(adoptNS([[WKCompositingView alloc] init]));

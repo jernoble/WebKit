@@ -53,6 +53,9 @@ typedef WebCore::VideoFullscreenInterfaceAVKit PlatformVideoFullscreenInterface;
 typedef WebCore::VideoFullscreenInterfaceMac PlatformVideoFullscreenInterface;
 #endif
 
+OBJC_CLASS WKLayerHostView;
+OBJC_CLASS WebAVPlayerLayer;
+
 namespace WebKit {
 
 constexpr size_t DefaultMockPictureInPictureWindowWidth = 100;
@@ -78,6 +81,10 @@ public:
 
     PlatformView *layerHostView() const { return m_layerHostView.get(); }
     void setLayerHostView(RetainPtr<PlatformView>&& layerHostView) { m_layerHostView = WTFMove(layerHostView); }
+
+    WebAVPlayerLayer *playerLayer() const { return m_playerLayer.get(); }
+    void setPlayerLayer(RetainPtr<WebAVPlayerLayer>&& playerLayer) { m_playerLayer = WTFMove(playerLayer); }
+
     void requestCloseAllMediaPresentations(bool finishedWithMedia, CompletionHandler<void()>&&);
 
 private:
@@ -119,6 +126,7 @@ private:
     Ref<PlaybackSessionModelContext> m_playbackSessionModel;
     PlaybackSessionContextIdentifier m_contextId;
     RetainPtr<PlatformView> m_layerHostView;
+    RetainPtr<WebAVPlayerLayer> m_playerLayer;
     HashSet<WebCore::VideoFullscreenModelClient*> m_clients;
     WebCore::FloatSize m_videoDimensions;
     bool m_hasVideo { false };
@@ -155,6 +163,8 @@ public:
     AVPlayerViewController *playerViewController(PlaybackSessionContextIdentifier) const;
 #endif
 
+    PlatformLayerContainer createLayerWithID(PlaybackSessionContextIdentifier, WebKit::LayerHostingContextID videoLayerID, const WebCore::FloatRect& initialRect, float hostingScaleFactor);
+
 private:
     friend class VideoFullscreenModelContext;
 
@@ -172,6 +182,8 @@ private:
     void removeClientForContext(PlaybackSessionContextIdentifier);
 
     void hasVideoInPictureInPictureDidChange(bool);
+
+    RetainPtr<WKLayerHostView> createLayerHostViewWithID(PlaybackSessionContextIdentifier, WebKit::LayerHostingContextID videoLayerID, const WebCore::FloatRect& initialRect, float hostingScaleFactor);
 
     // Messages from VideoFullscreenManager
     void setupFullscreenWithID(PlaybackSessionContextIdentifier, WebKit::LayerHostingContextID videoLayerID, const WebCore::FloatRect& initialRect, const WebCore::FloatSize& videoDimensions, float hostingScaleFactor, WebCore::HTMLMediaElementEnums::VideoFullscreenMode, bool allowsPictureInPicture, bool standby, bool blocksReturnToFullscreenFromPictureInPicture);

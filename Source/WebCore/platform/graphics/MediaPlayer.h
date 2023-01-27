@@ -60,7 +60,13 @@ OBJC_CLASS NSArray;
 typedef struct __CVBuffer* CVPixelBufferRef;
 #endif
 
+namespace WTF {
+class MachSendRight;
+}
+
 namespace WebCore {
+
+using LayerHostingContextID = uint32_t;
 
 enum class AudioSessionCategory : uint8_t;
 enum class DynamicRangeMode : uint8_t;
@@ -327,7 +333,6 @@ public:
     bool requiresImmediateCompositing() const;
     bool doesHaveAttribute(const AtomString&, AtomString* value = nullptr) const;
     PlatformLayer* platformLayer() const;
-
     void reloadAndResumePlaybackIfNeeded();
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)
@@ -342,6 +347,8 @@ public:
     void videoFullscreenStandbyChanged();
     bool isVideoFullscreenStandby() const;
 #endif
+
+    void setVideoInlineSizeFenced(const FloatSize&, const WTF::MachSendRight&);
 
 #if PLATFORM(IOS_FAMILY)
     NSArray *timedMetadata() const;
@@ -711,6 +718,7 @@ public:
     bool shouldDisableHDR() const { return client().mediaPlayerShouldDisableHDR(); }
 
     bool requiresRemotePlayback() const { return m_requiresRemotePlayback; }
+    LayerHostingContextID hostingContextID()  const;
 
 private:
     MediaPlayer(MediaPlayerClient&);

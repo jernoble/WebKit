@@ -265,6 +265,7 @@ PlatformCALayerCocoa::PlatformCALayerCocoa(LayerType layerType, PlatformCALayerC
         layerClass = [CAShapeLayer class];
         // fillColor defaults to opaque black.
         break;
+    case LayerTypeRemoteHostingTransportLayer:
     case LayerTypeCustom:
         break;
     }

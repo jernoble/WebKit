@@ -32,6 +32,7 @@
 #import "WebProcess.h"
 #import <AVFoundation/AVFoundation.h>
 #import <WebCore/GraphicsLayerCA.h>
+#import <WebCore/HTMLVideoElement.h>
 #import <WebCore/PlatformCALayerCocoa.h>
 #import <WebCore/WebCoreCALayerExtras.h>
 #import <WebCore/WebLayer.h>
@@ -51,6 +52,19 @@ Ref<PlatformCALayerRemote> PlatformCALayerRemoteCustom::create(PlatformLayer *pl
     return WTFMove(layer);
 }
 
+Ref<PlatformCALayerRemote> PlatformCALayerRemoteCustom::create(WebCore::HTMLVideoElement& videoElement, PlatformCALayerClient* owner, RemoteLayerTreeContext& context)
+{
+    auto layer = adoptRef(*new PlatformCALayerRemoteCustom(videoElement, owner, context));
+    context.layerDidEnterContext(layer.get(), layer->layerType(), videoElement);
+    return WTFMove(layer);
+}
+
+PlatformCALayerRemoteCustom::PlatformCALayerRemoteCustom(HTMLVideoElement& videoElement, PlatformCALayerClient* owner, RemoteLayerTreeContext& context)
+    : PlatformCALayerRemote(LayerTypeRemoteHostingTransportLayer, owner, context)
+{
+    m_layerHostingContext = LayerHostingContext::createTransportLayerForRemoteHosting(videoElement.layerHostingContextID());
+}
+
 PlatformCALayerRemoteCustom::PlatformCALayerRemoteCustom(LayerType layerType, PlatformLayer * customLayer, PlatformCALayerClient* owner, RemoteLayerTreeContext& context)
     : PlatformCALayerRemote(layerType, owner, context)
 {
@@ -65,14 +79,6 @@ PlatformCALayerRemoteCustom::PlatformCALayerRemoteCustom(LayerType layerType, Pl
             context.canShowWhileLocked()
 #endif
         });
-#if PLATFORM(IOS_FAMILY)
-        if (layerType == LayerTypeAVPlayerLayer) {
-            float scaleFactor = context.deviceScaleFactor();
-            // Set a scale factor here to make convertRect:toLayer:nil take scale factor into account. <rdar://problem/18316542>.
-            // This scale factor is inverted in the hosting process.
-            [customLayer setTransform:CATransform3DMakeScale(scaleFactor, scaleFactor, 1)];
-        }
-#endif
         break;
 #endif
     }
@@ -96,7 +102,7 @@ PlatformCALayerRemoteCustom::~PlatformCALayerRemoteCustom()
 
 uint32_t PlatformCALayerRemoteCustom::hostingContextID()
 {
-    return m_layerHostingContext->contextID();
+    return m_layerHostingContext->cachedContextID();
 }
 
 void PlatformCALayerRemoteCustom::populateCreationProperties(RemoteLayerTreeTransaction::LayerCreationProperties& properties, const RemoteLayerTreeContext& context, PlatformCALayer::LayerType type)

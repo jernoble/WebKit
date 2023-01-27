@@ -263,7 +263,6 @@ static Elements updateSubtree(HTMLElement& element, const TextRecognitionResult&
         Ref shadowRoot = mediaElement->ensureUserAgentShadowRoot();
         RefPtr controlsHost = mediaElement->mediaControlsHost();
         if (!controlsHost) {
-            ASSERT_NOT_REACHED();
             return nullptr;
         }
 

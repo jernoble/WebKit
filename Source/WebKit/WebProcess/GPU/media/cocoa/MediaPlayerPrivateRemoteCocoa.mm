@@ -91,11 +91,13 @@ void MediaPlayerPrivateRemote::layerHostingContextIdChanged(std::optional<WebKit
         m_videoLayerManager->didDestroyVideoLayer();
         return;
     }
-
-    m_videoLayer = createVideoLayerRemote(this, inlineLayerHostingContextId.value(), m_videoFullscreenGravity, presentationSize);
-#if PLATFORM(COCOA)
-    m_videoLayerManager->setVideoLayer(m_videoLayer.get(), presentationSize);
-#endif
+    setLayerHostingContextID(inlineLayerHostingContextId.value());
+    setCachedPresentationSize(presentationSize);
+    //This should be uncommented for non-UI Side compositing code to work. 
+//    m_videoLayer = createVideoLayerRemote(this, inlineLayerHostingContextId.value(), m_videoFullscreenGravity, presentationSize);
+//#if PLATFORM(COCOA)
+//    m_videoLayerManager->setVideoLayer(m_videoLayer.get(), presentationSize);
+//#endif
 }
 
 } // namespace WebKit

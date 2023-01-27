@@ -32,6 +32,7 @@
 #include "RemoteLayerTreeContext.h"
 #include "RemoteLayerTreeDrawingAreaProxyMessages.h"
 #include <WebCore/GraphicsLayerContentsDisplayDelegate.h>
+#include <WebCore/HTMLVideoElement.h>
 #include <WebCore/Model.h>
 #include <WebCore/PlatformScreen.h>
 
@@ -77,6 +78,11 @@ Ref<PlatformCALayer> GraphicsLayerCARemote::createPlatformCALayer(Ref<WebCore::M
     return PlatformCALayerRemote::create(model, owner, *m_context);
 }
 #endif
+
+Ref<PlatformCALayer> GraphicsLayerCARemote::createPlatformCALayer(WebCore::HTMLVideoElement& videoElement, PlatformCALayerClient* owner)
+{
+    return PlatformCALayerRemote::create(videoElement, owner, *m_context);
+}
 
 Ref<PlatformCAAnimation> GraphicsLayerCARemote::createPlatformCAAnimation(PlatformCAAnimation::AnimationType type, const String& keyPath)
 {
@@ -140,5 +146,11 @@ RefPtr<WebCore::GraphicsLayerAsyncContentsDisplayDelegate> GraphicsLayerCARemote
     return adoptRef(new GraphicsLayerCARemoteAsyncContentsDisplayDelegate(*WebProcess::singleton().parentProcessConnection(), m_context->drawingAreaIdentifier(), primaryLayerID()));
 }
 
+GraphicsLayer::LayerMode GraphicsLayerCARemote::layerMode() const
+{
+    if (m_context->layerHostingMode() == LayerHostingMode::InProcess)
+         return GraphicsLayer::LayerMode::PlatformLayer;
+    return GraphicsLayer::LayerMode::LayerHostingContextId;
+}
 
 } // namespace WebKit

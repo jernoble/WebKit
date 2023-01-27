@@ -241,6 +241,9 @@ TextStream& operator<<(TextStream& ts, PlatformCALayer::LayerType layerType)
         ts << "model-layer";
         break;
 #endif
+    case PlatformCALayer::LayerTypeRemoteHostingTransportLayer:
+        ts << "remote-hosting-transport-layer";
+        break;
     }
     return ts;
 }

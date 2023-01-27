@@ -35,6 +35,7 @@
 #include "FloatRect.h"
 #include "GraphicsLayerContentsDisplayDelegate.h"
 #include "GraphicsLayerFactory.h"
+#include "HTMLVideoElement.h"
 #include "Image.h"
 #include "InMemoryDisplayList.h"
 #include "Logging.h"
@@ -374,6 +375,13 @@ Ref<PlatformCALayer> GraphicsLayerCA::createPlatformCALayer(Ref<WebCore::Model>,
     return GraphicsLayerCA::createPlatformCALayer(PlatformCALayer::LayerTypeLayer, owner);
 }
 #endif
+
+Ref<PlatformCALayer> GraphicsLayerCA::createPlatformCALayer(HTMLVideoElement&, PlatformCALayerClient* owner)
+{
+    // By default, just make a plain layer; subclasses can override to provide a custom PlatformCALayer for hosting context id.
+    return GraphicsLayerCA::createPlatformCALayer(PlatformCALayer::LayerTypeLayer, owner);
+}
+
 
 Ref<PlatformCAAnimation> GraphicsLayerCA::createPlatformCAAnimation(PlatformCAAnimation::AnimationType type, const String& keyPath)
 {
@@ -1305,6 +1313,19 @@ void GraphicsLayerCA::setContentsToPlatformLayer(PlatformLayer* platformLayer, C
         m_contentsLayer = nullptr;
 
     m_contentsLayerPurpose = platformLayer ? purpose : ContentsLayerPurpose::None;
+    m_contentsDisplayDelegate = nullptr;
+    noteSublayersChanged();
+    noteLayerPropertyChanged(ContentsPlatformLayerChanged);
+}
+
+void GraphicsLayerCA::setContentsToVideoElement(HTMLVideoElement& videoElement, ContentsLayerPurpose purpose)
+{
+    auto hostingContextID = videoElement.layerHostingContextID();
+    if(!(hostingContextID == m_layerHostingContextID)) {
+        m_contentsLayer = createPlatformCALayer(videoElement, this);
+        m_layerHostingContextID = hostingContextID;
+    }
+    m_contentsLayerPurpose = purpose;
     m_contentsDisplayDelegate = nullptr;
     noteSublayersChanged();
     noteLayerPropertyChanged(ContentsPlatformLayerChanged);

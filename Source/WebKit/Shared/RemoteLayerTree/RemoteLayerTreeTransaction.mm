@@ -45,6 +45,8 @@ RemoteLayerTreeTransaction& RemoteLayerTreeTransaction::operator=(RemoteLayerTre
 
 RemoteLayerTreeTransaction::LayerCreationProperties::LayerCreationProperties()
     : type(WebCore::PlatformCALayer::LayerTypeLayer)
+    , playerIdentifier(std::nullopt)
+    , naturalSize(std::nullopt)
     , hostingContextID(0)
     , hostingDeviceScaleFactor(1)
     , preservesFlip(false)
@@ -57,6 +59,8 @@ void RemoteLayerTreeTransaction::LayerCreationProperties::encode(IPC::Encoder& e
     encoder << type;
     
     // PlatformCALayerRemoteCustom
+    encoder << playerIdentifier;
+    encoder << naturalSize;
     encoder << hostingContextID;
     encoder << hostingDeviceScaleFactor;
     encoder << preservesFlip;
@@ -79,6 +83,11 @@ auto RemoteLayerTreeTransaction::LayerCreationProperties::decode(IPC::Decoder& d
         return std::nullopt;
     
     // PlatformCALayerRemoteCustom
+    if (!decoder.decode(result.playerIdentifier))
+        return std::nullopt;
+    if (!decoder.decode(result.naturalSize))
+        return std::nullopt;
+    
     if (!decoder.decode(result.hostingContextID))
         return std::nullopt;
 
@@ -1037,6 +1046,7 @@ String RemoteLayerTreeTransaction::description() const
             case WebCore::PlatformCALayer::LayerTypeAVPlayerLayer:
                 ts << " (context-id " << createdLayer.hostingContextID << ")";
                 break;
+            case WebCore::PlatformCALayer::LayerTypeRemoteHostingTransportLayer:
             case WebCore::PlatformCALayer::LayerTypeCustom:
                 ts << " (context-id " << createdLayer.hostingContextID << ")";
                 break;

@@ -26,11 +26,18 @@
 #import "config.h"
 #import "WebAVPlayerLayer.h"
 
-#if PLATFORM(IOS_FAMILY) && ENABLE(VIDEO_PRESENTATION_MODE)
+#if PLATFORM(COCOA)
 
 #import "GeometryUtilities.h"
-#import "VideoFullscreenInterfaceAVKit.h"
+#import "VideoFullscreenChangeObserver.h"
 #import "WebAVPlayerController.h"
+#import <wtf/RunLoop.h>
+
+#if PLATFORM(IOS_FAMILY)
+#import "VideoFullscreenInterfaceAVKit.h"
+#else
+#import "VideoFullscreenInterfaceMac.h"
+#endif
 
 #import <pal/spi/cocoa/AVKitSPI.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
@@ -124,7 +131,7 @@ SOFT_LINK_CLASS_OPTIONAL(AVKit, __AVPlayerLayerView)
     if ([_videoSublayer superlayer] != self)
         return;
 
-    [_videoSublayer setPosition:CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds))];
+    [_videoSublayer setFrame:self.bounds];
 
     if (self.videoDimensions.height <= 0 || self.videoDimensions.width <= 0)
         return;
@@ -144,9 +151,8 @@ SOFT_LINK_CLASS_OPTIONAL(AVKit, __AVPlayerLayerView)
 
     targetVideoFrame = [self calculateTargetVideoFrame];
 
-    UIView *view = (UIView *)[_videoSublayer delegate];
     CGAffineTransform transform = CGAffineTransformMakeScale(targetVideoFrame.width() / sourceVideoFrame.width(), targetVideoFrame.height() / sourceVideoFrame.height());
-    [view setTransform:transform];
+    [_videoSublayer setAffineTransform:transform];
 
     NSTimeInterval animationDuration = [CATransaction animationDuration];
     RunLoop::main().dispatch([self, strongSelf = retainPtr(self), targetVideoFrame, animationDuration] {
@@ -164,7 +170,7 @@ SOFT_LINK_CLASS_OPTIONAL(AVKit, __AVPlayerLayerView)
     if ([_videoSublayer superlayer] != self)
         return;
 
-    if (CGRectEqualToRect(self.modelVideoLayerFrame, [self bounds]) && CGAffineTransformIsIdentity([(UIView *)[_videoSublayer delegate] transform]))
+    if (CGRectEqualToRect(self.modelVideoLayerFrame, [self bounds]) && CGAffineTransformIsIdentity([_videoSublayer affineTransform]))
         return;
 
     [CATransaction begin];
@@ -177,7 +183,7 @@ SOFT_LINK_CLASS_OPTIONAL(AVKit, __AVPlayerLayerView)
 
     _previousVideoGravity = _videoGravity;
 
-    [(UIView *)[_videoSublayer delegate] setTransform:CGAffineTransformIdentity];
+    [_videoSublayer setAffineTransform:CGAffineTransformIdentity];
 
     [CATransaction commit];
 }
@@ -242,5 +248,4 @@ SOFT_LINK_CLASS_OPTIONAL(AVKit, __AVPlayerLayerView)
 
 @end
 
-#endif // PLATFORM(IOS_FAMILY) && ENABLE(VIDEO_PRESENTATION_MODE)
-
+#endif // PLATFORM(COCOA)

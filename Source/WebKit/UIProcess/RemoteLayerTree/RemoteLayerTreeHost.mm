@@ -31,6 +31,7 @@
 #import "RemoteLayerTreePropertyApplier.h"
 #import "RemoteLayerTreeTransaction.h"
 #import "ShareableBitmap.h"
+#import "VideoFullscreenManagerProxy.h"
 #import "WKAnimationDelegate.h"
 #import "WebPageProxy.h"
 #import "WebProcessProxy.h"
@@ -347,8 +348,18 @@ std::unique_ptr<RemoteLayerTreeNode> RemoteLayerTreeHost::makeNode(const RemoteL
 #endif
     case PlatformCALayer::LayerTypeCustom:
     case PlatformCALayer::LayerTypeAVPlayerLayer:
+    case PlatformCALayer::LayerTypeRemoteHostingTransportLayer:
         if (m_isDebugLayerTreeHost)
             return RemoteLayerTreeNode::createWithPlainLayer(properties.layerID);
+
+        if (properties.playerIdentifier && properties.naturalSize) {
+            if (auto videoManager = m_drawingArea->page().videoFullscreenManager()) {
+                FloatRect initialRect = {FloatPoint { }, *properties.naturalSize};
+                return makeWithLayer(videoManager->createLayerWithID(*properties.playerIdentifier, properties.hostingContextID, initialRect, properties.hostingDeviceScaleFactor));
+            }
+        }
+
+
         return makeWithLayer([CALayer _web_renderLayerWithContextID:properties.hostingContextID shouldPreserveFlip:properties.preservesFlip]);
 
     case PlatformCALayer::LayerTypeShapeLayer:

@@ -37,6 +37,7 @@
 #import "VideoFullscreenModel.h"
 #import "WebPlaybackControlsManager.h"
 #import <AVFoundation/AVTime.h>
+#import <WebCore/WebAVPlayerLayer.h>
 #import <pal/avfoundation/MediaTimeAVFoundation.h>
 #import <pal/spi/cocoa/AVKitSPI.h>
 #import <pal/spi/mac/PIPSPI.h>
@@ -201,6 +202,8 @@ enum class PIPState {
 
     _videoViewContainer = adoptNS([[WebVideoViewContainer alloc] initWithFrame:frame]);
     [_videoViewContainer setVideoViewContainerDelegate:self];
+    [_videoViewContainer setWantsLayer:YES];
+    [videoView.layer removeFromSuperlayer];
     [_videoViewContainer addSubview:videoView];
     videoView.frame = [_videoViewContainer bounds];
     videoView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
@@ -443,6 +446,20 @@ WebVideoFullscreenInterfaceMacObjC *VideoFullscreenInterfaceMac::videoFullscreen
         m_webVideoFullscreenInterfaceObjC = adoptNS([[WebVideoFullscreenInterfaceMacObjC alloc] initWithVideoFullscreenInterfaceMac:this]);
 
     return m_webVideoFullscreenInterfaceObjC.get();
+}
+
+RetainPtr<PlatformLayer> VideoFullscreenInterfaceMac::createLayer(const FloatRect& initialRect)
+{
+    LOG(Fullscreen, "VideoFullscreenInterfaceMac::createLayer(%p), initialRect:{%d, %d, %d, %d}", this, initialRect.x(), initialRect.y(), initialRect.width(), initialRect.height());
+
+    auto playerLayer = adoptNS([[WebAVPlayerLayer alloc] init]);
+
+    auto modelVideoLayerFrame = CGRectMake(0, 0, initialRect.width(), initialRect.height());
+    [playerLayer setModelVideoLayerFrame:modelVideoLayerFrame];
+    [playerLayer setVideoDimensions:initialRect.size()];
+    [playerLayer setFullscreenInterface:this];
+
+    return playerLayer;
 }
 
 void VideoFullscreenInterfaceMac::setupFullscreen(NSView& layerHostedView, const IntRect& initialRect, NSWindow *parentWindow, HTMLMediaElementEnums::VideoFullscreenMode mode, bool allowsPictureInPicturePlayback)

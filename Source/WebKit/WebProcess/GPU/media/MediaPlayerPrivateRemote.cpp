@@ -1490,6 +1490,24 @@ WTFLogChannel& MediaPlayerPrivateRemote::logChannel() const
 }
 #endif
 
+LayerHostingContextID MediaPlayerPrivateRemote::hostingContextID() const
+{
+    return m_layerHostingContextID;
+}
+void MediaPlayerPrivateRemote::setLayerHostingContextID(LayerHostingContextID inID)
+{
+    m_layerHostingContextID = inID;
+}
+
+void MediaPlayerPrivateRemote::setCachedPresentationSize(const WebCore::IntSize& presentationSize)
+{
+    m_cachedPresentationSize = presentationSize;
+}
+
+WebCore::IntSize& MediaPlayerPrivateRemote::cachedPresentationSize()
+{
+    return m_cachedPresentationSize;
+}
 } // namespace WebKit
 
 #endif

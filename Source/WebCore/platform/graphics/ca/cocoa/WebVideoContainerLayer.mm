@@ -44,14 +44,5 @@
         layer.frame = bounds;
 }
 
-- (void)setPosition:(CGPoint)position
-{
-    if (!CATransform3DIsIdentity(self.transform)) {
-        // Pre-apply the transform added in the WebProcess to fix <rdar://problem/18316542> to the position.
-        position = CGPointApplyAffineTransform(position, CATransform3DGetAffineTransform(self.transform));
-    }
-    [super setPosition:position];
-}
-
 @end
 
