@@ -273,6 +273,13 @@ void VideoFullscreenManager::setupRemoteLayerHosting(HTMLVideoElement& videoElem
 
     auto [model, interface] = ensureModelAndInterface(contextId);
     model->setVideoElement(&videoElement);
+
+    addClientForContext(contextId);
+}
+
+void VideoFullscreenManager::willRemoveLayerForID(PlaybackSessionContextIdentifier contextId)
+{
+    removeClientForContext(contextId);
 }
 
 void VideoFullscreenManager::enterVideoFullscreenForVideoElement(HTMLVideoElement& videoElement, HTMLMediaElementEnums::VideoFullscreenMode mode, bool standby)
@@ -566,10 +573,6 @@ void VideoFullscreenManager::didExitFullscreen(PlaybackSessionContextIdentifier 
         RunLoop::main().dispatch([protectedThis = WTFMove(protectedThis), contextId, interface, model] () mutable {
             model->setVideoFullscreenLayer(nil, [protectedThis = WTFMove(protectedThis), contextId, interface] () mutable {
                 RunLoop::main().dispatch([protectedThis = WTFMove(protectedThis), contextId, interface] {
-                    if (interface->layerHostingContext()) {
-                        interface->layerHostingContext()->setRootLayer(nullptr);
-                        interface->setLayerHostingContext(nullptr);
-                    }
                     if (protectedThis->m_page)
                         protectedThis->m_page->send(Messages::VideoFullscreenManagerProxy::CleanupFullscreen(contextId));
                 });
@@ -584,11 +587,6 @@ void VideoFullscreenManager::didCleanupFullscreen(PlaybackSessionContextIdentifi
     LOG(Fullscreen, "VideoFullscreenManager::didCleanupFullscreen(%p, %x)", this, contextId);
 
     auto [model, interface] = ensureModelAndInterface(contextId);
-
-    if (interface->layerHostingContext()) {
-        interface->layerHostingContext()->setRootLayer(nullptr);
-        interface->setLayerHostingContext(nullptr);
-    }
 
     interface->setAnimationState(VideoFullscreenInterfaceContext::AnimationType::None);
     interface->setIsFullscreen(false);

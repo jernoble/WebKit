@@ -32,7 +32,9 @@
 #import "RemoteLayerTreeViews.h"
 #import "UIKitSPI.h"
 #import "WebPageProxy.h"
+#import "VideoFullscreenManagerProxy.h"
 #import <UIKit/UIScrollView.h>
+#import <WebCore/WebAVPlayerLayerView.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
 
 #if ENABLE(ARKIT_INLINE_PREVIEW_IOS)
@@ -69,14 +71,19 @@ std::unique_ptr<RemoteLayerTreeNode> RemoteLayerTreeHost::makeNode(const RemoteL
 
     case PlatformCALayer::LayerTypeRemoteHostingTransportLayer:
     case PlatformCALayer::LayerTypeCustom:
-    case PlatformCALayer::LayerTypeAVPlayerLayer:
-        if (!m_isDebugLayerTreeHost) {
-            auto view = adoptNS([[WKUIRemoteView alloc] initWithFrame:CGRectZero
-                pid:m_drawingArea->page().processIdentifier() contextID:properties.hostingContextID]);
-            return makeWithView(WTFMove(view));
-        }
-        return makeWithView(adoptNS([[WKCompositingView alloc] init]));
+    case PlatformCALayer::LayerTypeAVPlayerLayer: {
+        if (m_isDebugLayerTreeHost)
+            return makeWithView(adoptNS([[WKCompositingView alloc] init]));
 
+        if (properties.playerIdentifier && properties.initialSize && properties.naturalSize) {
+            if (auto videoManager = m_drawingArea->page().videoFullscreenManager())
+                return makeWithView(videoManager->createViewWithID(*properties.playerIdentifier, properties.hostingContextID, *properties.initialSize, *properties.naturalSize, properties.hostingDeviceScaleFactor));
+        }
+
+        auto view = adoptNS([[WKUIRemoteView alloc] initWithFrame:CGRectZero
+                                                              pid:m_drawingArea->page().processIdentifier() contextID:properties.hostingContextID]);
+        return makeWithView(WTFMove(view));
+    }
     case PlatformCALayer::LayerTypeShapeLayer:
         return makeWithView(adoptNS([[WKShapeView alloc] init]));
 

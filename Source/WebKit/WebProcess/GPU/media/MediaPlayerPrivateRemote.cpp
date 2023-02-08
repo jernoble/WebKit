@@ -980,6 +980,7 @@ void MediaPlayerPrivateRemote::setPresentationSize(const IntSize& size)
 void MediaPlayerPrivateRemote::setVideoInlineSizeFenced(const FloatSize& size, const WTF::MachSendRight& machSendRight)
 {
     connection().send(Messages::RemoteMediaPlayerProxy::SetVideoInlineSizeFenced(size, machSendRight), m_id);
+    m_videoInlineSize = size;
 }
 #endif
 
@@ -1499,15 +1500,6 @@ void MediaPlayerPrivateRemote::setLayerHostingContextID(LayerHostingContextID in
     m_layerHostingContextID = inID;
 }
 
-void MediaPlayerPrivateRemote::setCachedPresentationSize(const WebCore::IntSize& presentationSize)
-{
-    m_cachedPresentationSize = presentationSize;
-}
-
-WebCore::IntSize& MediaPlayerPrivateRemote::cachedPresentationSize()
-{
-    return m_cachedPresentationSize;
-}
 } // namespace WebKit
 
 #endif

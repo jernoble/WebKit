@@ -348,6 +348,7 @@ public:
     bool isVideoFullscreenStandby() const;
 #endif
 
+    FloatSize videoInlineSize() const;
     void setVideoInlineSizeFenced(const FloatSize&, const WTF::MachSendRight&);
 
 #if PLATFORM(IOS_FAMILY)

@@ -80,7 +80,8 @@ public:
     virtual void setVideoFullscreenMode(MediaPlayer::VideoFullscreenMode) { }
     virtual void videoFullscreenStandbyChanged() { }
 #endif
-    
+
+    virtual FloatSize videoInlineSize() const { return { }; }
     virtual void setVideoInlineSizeFenced(const FloatSize&, const WTF::MachSendRight&) { }
 
 #if PLATFORM(IOS_FAMILY)

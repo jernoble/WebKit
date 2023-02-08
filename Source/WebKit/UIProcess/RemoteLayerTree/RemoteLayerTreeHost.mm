@@ -209,6 +209,13 @@ void RemoteLayerTreeHost::layerWillBeRemoved(WebCore::GraphicsLayer::PlatformLay
         m_animationDelegates.remove(animationDelegateIter);
     }
 
+    auto videoLayerIter = m_videoLayers.find(layerID);
+    if (videoLayerIter != m_videoLayers.end()) {
+        if (auto videoManager = m_drawingArea->page().videoFullscreenManager())
+            videoManager->willRemoveLayerForID(videoLayerIter->value);
+        m_videoLayers.remove(videoLayerIter);
+    }
+
     m_nodes.remove(layerID);
 }
 
@@ -352,10 +359,10 @@ std::unique_ptr<RemoteLayerTreeNode> RemoteLayerTreeHost::makeNode(const RemoteL
         if (m_isDebugLayerTreeHost)
             return RemoteLayerTreeNode::createWithPlainLayer(properties.layerID);
 
-        if (properties.playerIdentifier && properties.naturalSize) {
+        if (properties.playerIdentifier && properties.initialSize && properties.naturalSize) {
             if (auto videoManager = m_drawingArea->page().videoFullscreenManager()) {
-                FloatRect initialRect = {FloatPoint { }, *properties.naturalSize};
-                return makeWithLayer(videoManager->createLayerWithID(*properties.playerIdentifier, properties.hostingContextID, initialRect, properties.hostingDeviceScaleFactor));
+                m_videoLayers.add(properties.layerID, *properties.playerIdentifier);
+                return makeWithLayer(videoManager->createLayerWithID(*properties.playerIdentifier, properties.hostingContextID, *properties.initialSize, *properties.nativeSize, properties.hostingDeviceScaleFactor));
             }
         }
 

@@ -159,6 +159,8 @@ public:
     UIViewController *presentingViewController();
     UIViewController *fullscreenViewController() const { return m_viewController.get(); }
 #endif
+    RetainPtr<WebAVPlayerLayerView*> createPlayerLayerView();
+
     WebAVPlayerLayerView* playerLayerView() const { return m_playerLayerView.get(); }
     WEBCORE_EXPORT bool pictureInPictureWasStartedWhenEnteringBackground() const;
 

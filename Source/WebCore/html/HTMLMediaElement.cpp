@@ -8453,6 +8453,11 @@ FloatSize HTMLMediaElement::naturalSize()
     return m_player->naturalSize();
 }
 
+FloatSize HTMLMediaElement::videoInlineSize() const
+{
+    return m_player->videoInlineSize();
+}
+
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
 
 void HTMLMediaElement::scheduleUpdateMediaState()

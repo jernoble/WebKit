@@ -638,6 +638,7 @@ public:
     bool hasSource() const { return hasCurrentSrc() || srcObject(); }
     WEBCORE_EXPORT LayerHostingContextID layerHostingContextID();
     WEBCORE_EXPORT WebCore::FloatSize naturalSize();
+    WEBCORE_EXPORT WebCore::FloatSize videoInlineSize() const;
     void updateMediaState();
 
 protected:

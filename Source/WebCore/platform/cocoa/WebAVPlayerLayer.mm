@@ -54,7 +54,6 @@ SOFT_LINK_CLASS_OPTIONAL(AVKit, __AVPlayerLayerView)
     RefPtr<PlatformVideoFullscreenInterface> _fullscreenInterface;
     RetainPtr<WebAVPlayerController> _playerController;
     RetainPtr<CALayer> _videoSublayer;
-    FloatRect _videoSublayerFrame;
     RetainPtr<NSString> _videoGravity;
     RetainPtr<NSString> _previousVideoGravity;
 }
@@ -67,6 +66,7 @@ SOFT_LINK_CLASS_OPTIONAL(AVKit, __AVPlayerLayerView)
         self.allowsHitTesting = NO;
         _videoGravity = AVLayerVideoGravityResizeAspect;
         _previousVideoGravity = AVLayerVideoGravityResizeAspect;
+        self.name = @"WebAVPlayerLayer";
     }
     return self;
 }
@@ -109,6 +109,11 @@ SOFT_LINK_CLASS_OPTIONAL(AVKit, __AVPlayerLayerView)
     return _videoSublayer.get();
 }
 
+- (void)addSublayer:(CALayer *)layer
+{
+    [super addSublayer:layer];
+}
+
 - (FloatRect)calculateTargetVideoFrame
 {
     FloatRect targetVideoFrame;
@@ -131,34 +136,45 @@ SOFT_LINK_CLASS_OPTIONAL(AVKit, __AVPlayerLayerView)
     if ([_videoSublayer superlayer] != self)
         return;
 
-    [_videoSublayer setFrame:self.bounds];
-
     if (self.videoDimensions.height <= 0 || self.videoDimensions.width <= 0)
         return;
 
-    FloatRect sourceVideoFrame;
-    FloatRect targetVideoFrame;
+    FloatRect sourceVideoFrame = self.videoSublayer.frame;
+    FloatRect targetVideoFrame = [self calculateTargetVideoFrame];
+
+    if (sourceVideoFrame == targetVideoFrame && CGAffineTransformIsIdentity(self.affineTransform))
+        return;
+
+    if (sourceVideoFrame.isEmpty()) {
+        // The initial resize will have an empty videoLayerFrame, which makes
+        // the subsequent calculations incorrect. When this happens, just do
+        // the synchronous resize step instead.
+        [self resolveBounds];
+        return;
+    }
+
     float videoAspectRatio = self.videoDimensions.width / self.videoDimensions.height;
 
     if ([AVLayerVideoGravityResize isEqualToString:_previousVideoGravity.get()])
-        sourceVideoFrame = self.modelVideoLayerFrame;
+        sourceVideoFrame = self.videoSublayer.frame;
     else if ([AVLayerVideoGravityResizeAspect isEqualToString:_previousVideoGravity.get()])
-        sourceVideoFrame = largestRectWithAspectRatioInsideRect(videoAspectRatio, self.modelVideoLayerFrame);
+        sourceVideoFrame = largestRectWithAspectRatioInsideRect(videoAspectRatio, self.videoSublayer.frame);
     else if ([AVLayerVideoGravityResizeAspectFill isEqualToString:_previousVideoGravity.get()])
-        sourceVideoFrame = smallestRectWithAspectRatioAroundRect(videoAspectRatio, self.modelVideoLayerFrame);
+        sourceVideoFrame = smallestRectWithAspectRatioAroundRect(videoAspectRatio, self.videoSublayer.frame);
     else
         ASSERT_NOT_REACHED();
 
-    targetVideoFrame = [self calculateTargetVideoFrame];
-
     CGAffineTransform transform = CGAffineTransformMakeScale(targetVideoFrame.width() / sourceVideoFrame.width(), targetVideoFrame.height() / sourceVideoFrame.height());
+
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
     [_videoSublayer setAffineTransform:transform];
+    [_videoSublayer setPosition:CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds))];
+    [CATransaction commit];
 
     NSTimeInterval animationDuration = [CATransaction animationDuration];
-    RunLoop::main().dispatch([self, strongSelf = retainPtr(self), targetVideoFrame, animationDuration] {
+    RunLoop::main().dispatch([self, strongSelf = retainPtr(self), animationDuration] {
         [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(resolveBounds) object:nil];
-
-        _videoSublayerFrame = targetVideoFrame;
         [self performSelector:@selector(resolveBounds) withObject:nil afterDelay:animationDuration + 0.1];
     });
 }
@@ -170,20 +186,20 @@ SOFT_LINK_CLASS_OPTIONAL(AVKit, __AVPlayerLayerView)
     if ([_videoSublayer superlayer] != self)
         return;
 
-    if (CGRectEqualToRect(self.modelVideoLayerFrame, [self bounds]) && CGAffineTransformIsIdentity([_videoSublayer affineTransform]))
+    if (CGRectEqualToRect(self.videoSublayer.frame, [self bounds]) && CGAffineTransformIsIdentity([_videoSublayer affineTransform]))
         return;
 
     [CATransaction begin];
     [CATransaction setAnimationDuration:0];
     [CATransaction setDisableActions:YES];
 
-    self.modelVideoLayerFrame = [self bounds];
     if (auto* model = _fullscreenInterface->videoFullscreenModel())
-        model->setVideoLayerFrame(_videoSublayerFrame);
+        model->setVideoLayerFrame(self.bounds);
 
     _previousVideoGravity = _videoGravity;
 
     [_videoSublayer setAffineTransform:CGAffineTransformIdentity];
+    [_videoSublayer setFrame:self.bounds];
 
     [CATransaction commit];
 }

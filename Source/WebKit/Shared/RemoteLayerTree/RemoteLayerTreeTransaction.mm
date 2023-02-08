@@ -61,6 +61,7 @@ void RemoteLayerTreeTransaction::LayerCreationProperties::encode(IPC::Encoder& e
     // PlatformCALayerRemoteCustom
     encoder << playerIdentifier;
     encoder << naturalSize;
+    encoder << initialSize;
     encoder << hostingContextID;
     encoder << hostingDeviceScaleFactor;
     encoder << preservesFlip;
@@ -87,7 +88,9 @@ auto RemoteLayerTreeTransaction::LayerCreationProperties::decode(IPC::Decoder& d
         return std::nullopt;
     if (!decoder.decode(result.naturalSize))
         return std::nullopt;
-    
+    if (!decoder.decode(result.initialSize))
+        return std::nullopt;
+
     if (!decoder.decode(result.hostingContextID))
         return std::nullopt;
 

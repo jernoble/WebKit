@@ -116,6 +116,7 @@ public:
     void renderingModeChanged();
 #if PLATFORM(COCOA)
     void layerHostingContextIdChanged(std::optional<WebKit::LayerHostingContextID>&&, const WebCore::IntSize&);
+    WebCore::FloatSize videoInlineSize() const final { return m_videoInlineSize; }
     void setVideoInlineSizeFenced(const WebCore::FloatSize&, const WTF::MachSendRight&) final;
 #endif
 
@@ -186,8 +187,6 @@ public:
 #endif
     LayerHostingContextID hostingContextID()const override;
     void setLayerHostingContextID(LayerHostingContextID  inID);
-    void setCachedPresentationSize(const WebCore::IntSize&  presentationSize);
-    WebCore::IntSize& cachedPresentationSize();
 private:
 
 #if !RELEASE_LOG_DISABLED
@@ -482,7 +481,7 @@ private:
     RefPtr<RemoteVideoFrameProxy> m_videoFrameGatheredWithVideoFrameMetadata;
 #endif
     LayerHostingContextID m_layerHostingContextID { 0 };
-    WebCore::IntSize m_cachedPresentationSize;
+    WebCore::FloatSize m_videoInlineSize;
     std::optional<WebCore::VideoFrameMetadata> m_videoFrameMetadata;
     bool m_isGatheringVideoFrameMetadata { false };
 #if PLATFORM(COCOA) && !HAVE(AVSAMPLEBUFFERDISPLAYLAYER_COPYDISPLAYEDPIXELBUFFER)

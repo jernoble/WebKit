@@ -92,7 +92,7 @@ void MediaPlayerPrivateRemote::layerHostingContextIdChanged(std::optional<WebKit
         return;
     }
     setLayerHostingContextID(inlineLayerHostingContextId.value());
-    setCachedPresentationSize(presentationSize);
+    m_videoInlineSize = presentationSize;
     //This should be uncommented for non-UI Side compositing code to work. 
 //    m_videoLayer = createVideoLayerRemote(this, inlineLayerHostingContextId.value(), m_videoFullscreenGravity, presentationSize);
 //#if PLATFORM(COCOA)

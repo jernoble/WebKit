@@ -124,10 +124,12 @@ void RemoteLayerTreeContext::layerDidEnterContext(PlatformCALayerRemote& layer, 
 
     RemoteLayerTreeTransaction::LayerCreationProperties creationProperties;
     creationProperties.playerIdentifier = videoElement.identifier();
+    creationProperties.initialSize = videoElement.videoInlineSize();
     creationProperties.naturalSize = videoElement.naturalSize();
     layer.populateCreationProperties(creationProperties, *this, type);
 
     m_webPage.videoFullscreenManager().setupRemoteLayerHosting(videoElement);
+    m_videoLayers.add(layerID, videoElement.identifier());
 
     m_createdLayers.add(layerID, WTFMove(creationProperties));
     m_livePlatformLayers.add(layerID, &layer);
@@ -137,6 +139,12 @@ void RemoteLayerTreeContext::layerWillLeaveContext(PlatformCALayerRemote& layer)
 {
     ASSERT(layer.layerID());
     GraphicsLayer::PlatformLayerID layerID = layer.layerID();
+
+    auto videoLayerIter = m_videoLayers.find(layerID);
+    if (videoLayerIter != m_videoLayers.end()) {
+        m_webPage.videoFullscreenManager().willRemoveLayerForID(videoLayerIter->value);
+        m_videoLayers.remove(videoLayerIter);
+    }
 
     m_createdLayers.remove(layerID);
     m_livePlatformLayers.remove(layerID);

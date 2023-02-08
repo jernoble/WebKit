@@ -120,6 +120,7 @@ public:
         WebCore::GraphicsLayer::PlatformLayerID layerID;
         WebCore::PlatformCALayer::LayerType type;
         std::optional<PlaybackSessionContextIdentifier> playerIdentifier;
+        std::optional<WebCore::FloatSize> initialSize;
         std::optional<WebCore::FloatSize> naturalSize;
 
         uint32_t hostingContextID;
