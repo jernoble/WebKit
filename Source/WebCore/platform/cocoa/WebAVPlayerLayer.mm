@@ -56,6 +56,7 @@ SOFT_LINK_CLASS_OPTIONAL(AVKit, __AVPlayerLayerView)
     RetainPtr<CALayer> _videoSublayer;
     RetainPtr<NSString> _videoGravity;
     RetainPtr<NSString> _previousVideoGravity;
+    CGRect _targetVideoFrame;
 }
 
 - (instancetype)init
@@ -139,11 +140,19 @@ SOFT_LINK_CLASS_OPTIONAL(AVKit, __AVPlayerLayerView)
     if (self.videoDimensions.height <= 0 || self.videoDimensions.width <= 0)
         return;
 
-    FloatRect sourceVideoFrame = self.videoSublayer.frame;
+    FloatRect sourceVideoFrame = self.videoSublayer.bounds;
     FloatRect targetVideoFrame = [self calculateTargetVideoFrame];
 
-    if (sourceVideoFrame == targetVideoFrame && CGAffineTransformIsIdentity(self.affineTransform))
-        return;
+    float videoAspectRatio = self.videoDimensions.width / self.videoDimensions.height;
+
+    if ([AVLayerVideoGravityResize isEqualToString:_previousVideoGravity.get()])
+        sourceVideoFrame = self.videoSublayer.bounds;
+    else if ([AVLayerVideoGravityResizeAspect isEqualToString:_previousVideoGravity.get()])
+        sourceVideoFrame = largestRectWithAspectRatioInsideRect(videoAspectRatio, self.videoSublayer.bounds);
+    else if ([AVLayerVideoGravityResizeAspectFill isEqualToString:_previousVideoGravity.get()])
+        sourceVideoFrame = smallestRectWithAspectRatioAroundRect(videoAspectRatio, self.videoSublayer.bounds);
+    else
+        ASSERT_NOT_REACHED();
 
     if (sourceVideoFrame.isEmpty()) {
         // The initial resize will have an empty videoLayerFrame, which makes
@@ -153,16 +162,8 @@ SOFT_LINK_CLASS_OPTIONAL(AVKit, __AVPlayerLayerView)
         return;
     }
 
-    float videoAspectRatio = self.videoDimensions.width / self.videoDimensions.height;
-
-    if ([AVLayerVideoGravityResize isEqualToString:_previousVideoGravity.get()])
-        sourceVideoFrame = self.videoSublayer.frame;
-    else if ([AVLayerVideoGravityResizeAspect isEqualToString:_previousVideoGravity.get()])
-        sourceVideoFrame = largestRectWithAspectRatioInsideRect(videoAspectRatio, self.videoSublayer.frame);
-    else if ([AVLayerVideoGravityResizeAspectFill isEqualToString:_previousVideoGravity.get()])
-        sourceVideoFrame = smallestRectWithAspectRatioAroundRect(videoAspectRatio, self.videoSublayer.frame);
-    else
-        ASSERT_NOT_REACHED();
+    if (sourceVideoFrame == targetVideoFrame && CGAffineTransformIsIdentity(self.affineTransform))
+        return;
 
     CGAffineTransform transform = CGAffineTransformMakeScale(targetVideoFrame.width() / sourceVideoFrame.width(), targetVideoFrame.height() / sourceVideoFrame.height());
 
@@ -171,6 +172,8 @@ SOFT_LINK_CLASS_OPTIONAL(AVKit, __AVPlayerLayerView)
     [_videoSublayer setAffineTransform:transform];
     [_videoSublayer setPosition:CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds))];
     [CATransaction commit];
+
+    _targetVideoFrame = targetVideoFrame;
 
     NSTimeInterval animationDuration = [CATransaction animationDuration];
     RunLoop::main().dispatch([self, strongSelf = retainPtr(self), animationDuration] {
@@ -186,7 +189,7 @@ SOFT_LINK_CLASS_OPTIONAL(AVKit, __AVPlayerLayerView)
     if ([_videoSublayer superlayer] != self)
         return;
 
-    if (CGRectEqualToRect(self.videoSublayer.frame, [self bounds]) && CGAffineTransformIsIdentity([_videoSublayer affineTransform]))
+    if (CGRectEqualToRect(self.videoSublayer.frame, _targetVideoFrame) && CGAffineTransformIsIdentity([_videoSublayer affineTransform]))
         return;
 
     [CATransaction begin];
@@ -199,7 +202,7 @@ SOFT_LINK_CLASS_OPTIONAL(AVKit, __AVPlayerLayerView)
     _previousVideoGravity = _videoGravity;
 
     [_videoSublayer setAffineTransform:CGAffineTransformIdentity];
-    [_videoSublayer setFrame:self.bounds];
+    [_videoSublayer setFrame:_targetVideoFrame];
 
     [CATransaction commit];
 }

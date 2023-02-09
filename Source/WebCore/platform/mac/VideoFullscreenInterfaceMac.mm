@@ -454,8 +454,6 @@ RetainPtr<PlatformLayer> VideoFullscreenInterfaceMac::createLayer(const FloatRec
 
     auto playerLayer = adoptNS([[WebAVPlayerLayer alloc] init]);
 
-    auto modelVideoLayerFrame = CGRectMake(0, 0, initialRect.width(), initialRect.height());
-    [playerLayer setModelVideoLayerFrame:modelVideoLayerFrame];
     [playerLayer setVideoDimensions:initialRect.size()];
     [playerLayer setFullscreenInterface:this];
 

@@ -566,8 +566,6 @@ PlatformLayerContainer VideoFullscreenManagerProxy::createLayerWithID(PlaybackSe
     if (!model->playerLayer()) {
         auto playerLayer = adoptNS([[WebAVPlayerLayer alloc] init]);
         
-        auto modelVideoLayerFrame = CGRectMake(0, 0, initialSize.width(), initialSize.height());
-        [playerLayer setModelVideoLayerFrame:modelVideoLayerFrame];
         [playerLayer setVideoDimensions:initialSize];
         [playerLayer setFullscreenInterface:interface.get()];
         
@@ -612,8 +610,7 @@ RetainPtr<WebAVPlayerLayerView> VideoFullscreenManagerProxy::createViewWithID(Pl
 
         auto *playerLayer = (WebAVPlayerLayer *)[playerView layer];
 
-        auto modelVideoLayerFrame = CGRectMake(0, 0, initialSize.width(), initialSize.height());
-        [playerLayer setModelVideoLayerFrame:modelVideoLayerFrame];
+        auto initialRect = CGRectMake(0, 0, initialSize.width(), initialSize.height());
         [playerLayer setVideoDimensions:nativeSize];
         [playerLayer setFullscreenInterface:interface.get()];
 
@@ -622,7 +619,7 @@ RetainPtr<WebAVPlayerLayerView> VideoFullscreenManagerProxy::createViewWithID(Pl
         model->setPlayerLayer(playerLayer);
         model->setPlayerView(WTFMove(playerView));
 
-        [playerView setFrame:modelVideoLayerFrame];
+        [playerView setFrame:initialRect];
         [playerView setNeedsLayout];
         [playerView layoutIfNeeded];
     }
@@ -956,7 +953,6 @@ void VideoFullscreenManagerProxy::didCleanupFullscreen(PlaybackSessionContextIde
     if (auto playerLayer = model->playerLayer()) {
         // Return the video layer to the player layer
         [playerLayer addSublayer:[videoView layer]];
-        playerLayer.modelVideoLayerFrame = videoView.layer.frame;
         [playerLayer layoutSublayers];
     } else {
         [CATransaction flush];

@@ -1261,12 +1261,8 @@ void VideoFullscreenInterfaceAVKit::doSetup()
 
     WebAVPlayerLayer *playerLayer = (WebAVPlayerLayer *)[m_playerLayerView playerLayer];
 
-    auto modelVideoLayerFrame = [m_videoView layer].frame;
     playerLayer.fullscreenInterface = this;
-    [playerLayer setModelVideoLayerFrame:modelVideoLayerFrame];
     [playerLayer setVideoDimensions:[playerController() contentDimensions]];
-    if (m_videoFullscreenModel)
-        m_videoFullscreenModel->setVideoLayerFrame(modelVideoLayerFrame);
 
     if (!m_playerViewController)
         m_playerViewController = adoptNS([[WebAVPlayerViewController alloc] initWithFullscreenInterface:this]);
