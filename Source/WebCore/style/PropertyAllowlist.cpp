@@ -140,8 +140,10 @@ bool isValidCueStyleProperty(CSSPropertyID id)
     case CSSPropertyOutlineStyle:
     case CSSPropertyOutlineWidth:
     case CSSPropertyVisibility:
+    case CSSPropertyWebkitRubyPosition:
     case CSSPropertyWhiteSpace:
     case CSSPropertyWhiteSpaceCollapse:
+    case CSSPropertyTextCombineUpright:
     case CSSPropertyTextDecorationLine:
     case CSSPropertyTextShadow:
     case CSSPropertyTextWrap:
