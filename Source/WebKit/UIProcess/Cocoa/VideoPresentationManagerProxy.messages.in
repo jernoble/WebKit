@@ -31,9 +31,7 @@ messages -> VideoPresentationManagerProxy {
 #endif
     ExitFullscreen(WebKit::PlaybackSessionContextIdentifier contextId, WebCore::FloatRect finalRect) -> (bool success)
     SetInlineRect(WebKit::PlaybackSessionContextIdentifier contextId, WebCore::FloatRect inlineRect, bool visible)
-    SetHasVideoContentLayer(WebKit::PlaybackSessionContextIdentifier contextId, bool value)
     CleanupFullscreen(WebKit::PlaybackSessionContextIdentifier contextId)
-    PreparedToReturnToInline(WebKit::PlaybackSessionContextIdentifier contextId, bool visible, WebCore::FloatRect inlineRect)
     PreparedToExitFullscreen(WebKit::PlaybackSessionContextIdentifier contextId)
     ExitFullscreenWithoutAnimationToMode(WebKit::PlaybackSessionContextIdentifier contextId, WebCore::HTMLMediaElementEnums::VideoFullscreenMode videoFullscreenMode)
 

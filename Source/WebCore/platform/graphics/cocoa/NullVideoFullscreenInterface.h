@@ -56,9 +56,7 @@ public:
     void cleanupFullscreen() { }
     void invalidate() { }
     void requestHideAndExitFullscreen() { }
-    void preparedToReturnToInline(bool visible, const FloatRect& inlineRect) { }
     void preparedToExitFullscreen() { }
-    void setHasVideoContentLayer(bool) { }
     void setInlineRect(const FloatRect&, bool visible) { }
     void preparedToReturnToStandby() { }
     bool mayAutomaticallyShowVideoPictureInPicture() const { return false; }

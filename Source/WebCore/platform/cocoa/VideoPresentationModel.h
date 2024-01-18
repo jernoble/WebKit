@@ -36,6 +36,7 @@
 #include "PlaybackSessionModel.h"
 #include <wtf/CheckedPtr.h>
 #include <wtf/CompletionHandler.h>
+#include <wtf/NativePromise.h>
 #include <wtf/WeakPtr.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -73,8 +74,9 @@ public:
     virtual void didExitPictureInPicture() = 0;
 
     virtual void requestUpdateInlineRect() { };
-    virtual void requestVideoContentLayer() { };
-    virtual void returnVideoContentLayer() { };
+    using ContentLayerPromise = GenericPromise;
+    virtual Ref<ContentLayerPromise> requestVideoContentLayer() { return ContentLayerPromise::createAndReject(); }
+    virtual Ref<ContentLayerPromise> returnVideoContentLayer() { return ContentLayerPromise::createAndReject(); }
     virtual void returnVideoView() { };
     virtual void didSetupFullscreen() { };
     virtual void didEnterFullscreen(const FloatSize&) { };
@@ -82,7 +84,8 @@ public:
     virtual void willExitFullscreen() { };
     virtual void didExitFullscreen() { };
     virtual void didCleanupFullscreen() { };
-    virtual void fullscreenMayReturnToInline() { };
+    using FullscreenMayReturnPromise = NativePromise<FloatRect, void>;
+    virtual Ref<FullscreenMayReturnPromise> fullscreenMayReturnToInline() { return FullscreenMayReturnPromise::createAndReject(); };
 
     virtual void requestRouteSharingPolicyAndContextUID(CompletionHandler<void(RouteSharingPolicy, String)>&& completionHandler) { completionHandler(RouteSharingPolicy::Default, emptyString()); }
 

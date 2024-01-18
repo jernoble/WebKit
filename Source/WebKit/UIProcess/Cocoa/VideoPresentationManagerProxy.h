@@ -111,8 +111,8 @@ private:
     void requestRouteSharingPolicyAndContextUID(CompletionHandler<void(WebCore::RouteSharingPolicy, String)>&&) final;
 
     void requestUpdateInlineRect() final;
-    void requestVideoContentLayer() final;
-    void returnVideoContentLayer() final;
+    Ref<ContentLayerPromise> requestVideoContentLayer() final;
+    Ref<ContentLayerPromise> returnVideoContentLayer() final;
     void returnVideoView() final;
     void didSetupFullscreen() final;
     void failedToEnterFullscreen() final;
@@ -120,7 +120,7 @@ private:
     void willExitFullscreen() final;
     void didExitFullscreen() final;
     void didCleanupFullscreen() final;
-    void fullscreenMayReturnToInline() final;
+    Ref<FullscreenMayReturnPromise> fullscreenMayReturnToInline() final;
 
 #if !RELEASE_LOG_DISABLED
     const void* logIdentifier() const final;
@@ -218,13 +218,11 @@ private:
     // Messages from VideoPresentationManager
     void setupFullscreenWithID(PlaybackSessionContextIdentifier, WebKit::LayerHostingContextID videoLayerID, const WebCore::FloatRect& screenRect, const WebCore::FloatSize& initialSize, const WebCore::FloatSize& videoDimensions, float hostingScaleFactor, WebCore::HTMLMediaElementEnums::VideoFullscreenMode, bool allowsPictureInPicture, bool standby, bool blocksReturnToFullscreenFromPictureInPicture);
     void setInlineRect(PlaybackSessionContextIdentifier, const WebCore::FloatRect& inlineRect, bool visible);
-    void setHasVideoContentLayer(PlaybackSessionContextIdentifier, bool value);
     void setHasVideo(PlaybackSessionContextIdentifier, bool);
     void setVideoDimensions(PlaybackSessionContextIdentifier, const WebCore::FloatSize&);
     void enterFullscreen(PlaybackSessionContextIdentifier);
     void exitFullscreen(PlaybackSessionContextIdentifier, WebCore::FloatRect finalRect, CompletionHandler<void(bool)>&&);
     void cleanupFullscreen(PlaybackSessionContextIdentifier);
-    void preparedToReturnToInline(PlaybackSessionContextIdentifier, bool visible, WebCore::FloatRect inlineRect);
     void preparedToExitFullscreen(PlaybackSessionContextIdentifier);
     void exitFullscreenWithoutAnimationToMode(PlaybackSessionContextIdentifier, WebCore::HTMLMediaElementEnums::VideoFullscreenMode);
     void setPlayerIdentifier(PlaybackSessionContextIdentifier, std::optional<WebCore::MediaPlayerIdentifier>);
@@ -235,8 +233,10 @@ private:
     // Messages to VideoPresentationManager
     void requestFullscreenMode(PlaybackSessionContextIdentifier, WebCore::HTMLMediaElementEnums::VideoFullscreenMode, bool finishedWithMedia = false);
     void requestUpdateInlineRect(PlaybackSessionContextIdentifier);
-    void requestVideoContentLayer(PlaybackSessionContextIdentifier);
-    void returnVideoContentLayer(PlaybackSessionContextIdentifier);
+
+    using ContentLayerPromise = WebCore::VideoPresentationModel::ContentLayerPromise;
+    Ref<ContentLayerPromise> requestVideoContentLayer(PlaybackSessionContextIdentifier);
+    Ref<ContentLayerPromise> returnVideoContentLayer(PlaybackSessionContextIdentifier);
     void returnVideoView(PlaybackSessionContextIdentifier);
     void didSetupFullscreen(PlaybackSessionContextIdentifier);
     void willExitFullscreen(PlaybackSessionContextIdentifier);
@@ -247,7 +247,8 @@ private:
     void setVideoLayerFrame(PlaybackSessionContextIdentifier, WebCore::FloatRect);
     void setVideoLayerGravity(PlaybackSessionContextIdentifier, WebCore::MediaPlayerEnums::VideoGravity);
     void fullscreenModeChanged(PlaybackSessionContextIdentifier, WebCore::HTMLMediaElementEnums::VideoFullscreenMode);
-    void fullscreenMayReturnToInline(PlaybackSessionContextIdentifier);
+    using FullscreenMayReturnPromise = WebCore::VideoPresentationModel::FullscreenMayReturnPromise;
+    Ref<FullscreenMayReturnPromise> fullscreenMayReturnToInline(PlaybackSessionContextIdentifier);
 
     void requestCloseAllMediaPresentations(PlaybackSessionContextIdentifier, bool finishedWithMedia, CompletionHandler<void()>&&);
     void callCloseCompletionHandlers();

@@ -42,6 +42,7 @@
 #import <QuartzCore/CoreAnimation.h>
 #import <UIKit/UIView.h>
 #import <pal/spi/cocoa/QuartzCoreSPI.h>
+#import <wtf/BlockPtr.h>
 #import <wtf/CrossThreadCopier.h>
 #import <wtf/WorkQueue.h>
 
@@ -201,14 +202,14 @@ private:
     void didExitPictureInPicture() final;
 
     void requestUpdateInlineRect() final;
-    void requestVideoContentLayer() final;
-    void returnVideoContentLayer() final;
+    Ref<ContentLayerPromise> requestVideoContentLayer() final;
+    Ref<ContentLayerPromise> returnVideoContentLayer() final;
     void returnVideoView() final { }
     void didSetupFullscreen() final;
     void willExitFullscreen() final;
     void didExitFullscreen() final;
     void didCleanupFullscreen() final;
-    void fullscreenMayReturnToInline() final;
+    Ref<FullscreenMayReturnPromise> fullscreenMayReturnToInline() final;
 
     HashSet<CheckedPtr<PlaybackSessionModelClient>> m_playbackClients;
     HashSet<CheckedPtr<VideoPresentationModelClient>> m_presentationClients;
@@ -252,44 +253,44 @@ void VideoFullscreenControllerContext::requestUpdateInlineRect()
 #endif
 }
 
-void VideoFullscreenControllerContext::requestVideoContentLayer()
+auto VideoFullscreenControllerContext::requestVideoContentLayer() -> Ref<ContentLayerPromise>
 {
+    auto producer = makeUnique<ContentLayerPromise::Producer>();
+    auto promise = producer->promise();
 #if PLATFORM(IOS_FAMILY)
     ASSERT(isUIThread());
-    WebThreadRun([protectedThis = Ref { *this }, this, videoFullscreenLayer = retainPtr([m_videoFullscreenView layer])] () mutable {
+    WebThreadRun(makeBlockPtr([protectedThis = Ref { *this }, this, videoFullscreenLayer = retainPtr([m_videoFullscreenView layer]), producer = WTFMove(producer)] () mutable {
         [videoFullscreenLayer setBackgroundColor:cachedCGColor(WebCore::Color::transparentBlack).get()];
-        m_presentationModel->setVideoFullscreenLayer(videoFullscreenLayer.get(), [protectedThis = WTFMove(protectedThis), this] () mutable {
-            RunLoop::main().dispatch([protectedThis = WTFMove(protectedThis), this] {
-                if (!m_interface)
-                    return;
-
-                m_interface->setHasVideoContentLayer(true);
+        m_presentationModel->setVideoFullscreenLayer(videoFullscreenLayer.get(), [producer = WTFMove(producer)] () mutable {
+            RunLoop::main().dispatch([producer = WTFMove(producer)] () mutable {
+                producer->resolve();
             });
         });
-    });
+    }).get());
 #else
     ASSERT_NOT_REACHED();
 #endif
+    return promise;
 }
 
-void VideoFullscreenControllerContext::returnVideoContentLayer()
+auto VideoFullscreenControllerContext::returnVideoContentLayer() -> Ref<ContentLayerPromise>
 {
+    auto producer = makeUnique<ContentLayerPromise::Producer>();
+    auto promise = producer->promise();
 #if PLATFORM(IOS_FAMILY)
     ASSERT(isUIThread());
-    WebThreadRun([protectedThis = Ref { *this }, this, videoFullscreenLayer = retainPtr([m_videoFullscreenView layer])] () mutable {
+    WebThreadRun(makeBlockPtr([protectedThis = Ref { *this }, this, videoFullscreenLayer = retainPtr([m_videoFullscreenView layer]), producer = WTFMove(producer)] () mutable {
         [videoFullscreenLayer setBackgroundColor:cachedCGColor(WebCore::Color::transparentBlack).get()];
-        m_presentationModel->setVideoFullscreenLayer(nil, [protectedThis = WTFMove(protectedThis), this] () mutable {
-            RunLoop::main().dispatch([protectedThis = WTFMove(protectedThis), this] {
-                if (!m_interface)
-                    return;
-
-                m_interface->setHasVideoContentLayer(false);
+        m_presentationModel->setVideoFullscreenLayer(nil, [producer = WTFMove(producer)] () mutable {
+            RunLoop::main().dispatch([producer = WTFMove(producer)] () mutable {
+                producer->resolve();
             });
         });
-    });
+    }).get());
 #else
     ASSERT_NOT_REACHED();
 #endif
+    return promise;
 }
 
 void VideoFullscreenControllerContext::didSetupFullscreen()
@@ -359,15 +360,17 @@ void VideoFullscreenControllerContext::didCleanupFullscreen()
     });
 }
 
-void VideoFullscreenControllerContext::fullscreenMayReturnToInline()
+auto VideoFullscreenControllerContext::fullscreenMayReturnToInline() -> Ref<FullscreenMayReturnPromise>
 {
     ASSERT(isUIThread());
-    WebThreadRun([protectedThis = Ref { *this }, this] () mutable {
+    auto producer = makeUnique<FullscreenMayReturnPromise::Producer>();
+    auto promise = producer->promise();
+
+    WebThreadRun(makeBlockPtr([protectedThis = Ref { *this }, this, producer = WTFMove(producer)] () mutable {
         IntRect clientRect = elementRectInWindow(m_videoElement.get());
-        RunLoop::main().dispatch([protectedThis = WTFMove(protectedThis), this, clientRect] {
-            m_interface->preparedToReturnToInline(true, clientRect);
-        });
-    });
+        producer->resolve(clientRect);
+    }).get());
+    return promise;
 }
 
 #pragma mark PlaybackSessionModelClient

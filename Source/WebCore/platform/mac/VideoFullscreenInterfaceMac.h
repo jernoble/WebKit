@@ -81,7 +81,6 @@ public:
     WEBCORE_EXPORT void cleanupFullscreen();
     WEBCORE_EXPORT void invalidate();
     void requestHideAndExitFullscreen() { }
-    WEBCORE_EXPORT void preparedToReturnToInline(bool visible, const IntRect& inlineRect, NSWindow *parentWindow);
     void preparedToExitFullscreen() { }
 
     HTMLMediaElementEnums::VideoFullscreenMode mode() const { return m_mode; }

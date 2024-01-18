@@ -548,13 +548,6 @@ static const char* boolString(bool val)
 }
 #endif
 
-void VideoFullscreenInterfaceMac::preparedToReturnToInline(bool visible, const IntRect& inlineRect, NSWindow *parentWindow)
-{
-    UNUSED_PARAM(visible);
-    UNUSED_PARAM(inlineRect);
-    UNUSED_PARAM(parentWindow);
-}
-
 void VideoFullscreenInterfaceMac::externalPlaybackChanged(bool enabled, PlaybackSessionModel::ExternalPlaybackTargetType, const String&)
 {
     LOG(Fullscreen, "VideoFullscreenInterfaceMac::externalPlaybackChanged(%p), enabled:%s", this, boolString(enabled));

@@ -529,34 +529,32 @@ void VideoPresentationManager::requestUpdateInlineRect(PlaybackSessionContextIde
     RefPtr { m_page.get() }->send(Messages::VideoPresentationManagerProxy::SetInlineRect(contextId, inlineRect, inlineRect != IntRect(0, 0, 0, 0)));
 }
 
-void VideoPresentationManager::requestVideoContentLayer(PlaybackSessionContextIdentifier contextId)
+void VideoPresentationManager::requestVideoContentLayer(PlaybackSessionContextIdentifier contextId, ContentLayerResultHandler&& resultHandler)
 {
     auto [model, interface] = ensureModelAndInterface(contextId);
     INFO_LOG(LOGIDENTIFIER, model->logIdentifier());
 
     auto videoLayer = interface->rootLayer();
 
-    model->setVideoFullscreenLayer(videoLayer.get(), [protectedThis = Ref { *this }, contextId] () mutable {
-        RunLoop::main().dispatch([protectedThis = WTFMove(protectedThis), contextId] {
-            if (RefPtr page = protectedThis->m_page.get())
-                page->send(Messages::VideoPresentationManagerProxy::SetHasVideoContentLayer(contextId, true));
+    model->setVideoFullscreenLayer(videoLayer.get(), [resultHandler = WTFMove(resultHandler)] () mutable {
+        RunLoop::main().dispatch([resultHandler = WTFMove(resultHandler)] () mutable {
+            resultHandler(ContentLayerResults::Succeeded);
         });
     });
 }
 
-void VideoPresentationManager::returnVideoContentLayer(PlaybackSessionContextIdentifier contextId)
+void VideoPresentationManager::returnVideoContentLayer(PlaybackSessionContextIdentifier contextId, ContentLayerResultHandler&& resultHandler)
 {
     RefPtr<VideoPresentationModelVideoElement> model;
     RefPtr<VideoPresentationInterfaceContext> interface;
     std::tie(model, interface) = ensureModelAndInterface(contextId);
     INFO_LOG(LOGIDENTIFIER, model->logIdentifier());
 
-    model->waitForPreparedForInlineThen([protectedThis = Ref { *this }, contextId, model] () mutable { // need this for return video layer
-        RunLoop::main().dispatch([protectedThis = WTFMove(protectedThis), contextId, model] () mutable {
-            model->setVideoFullscreenLayer(nil, [protectedThis = WTFMove(protectedThis), contextId] () mutable {
-                RunLoop::main().dispatch([protectedThis = WTFMove(protectedThis), contextId] {
-                    if (RefPtr page = protectedThis->m_page.get())
-                        page->send(Messages::VideoPresentationManagerProxy::SetHasVideoContentLayer(contextId, false));
+    model->waitForPreparedForInlineThen([model, resultHandler = WTFMove(resultHandler)] () mutable { // need this for return video layer
+        RunLoop::main().dispatch([model = WTFMove(model), resultHandler = WTFMove(resultHandler)] () mutable {
+            model->setVideoFullscreenLayer(nil, [resultHandler = WTFMove(resultHandler)] () mutable {
+                RunLoop::main().dispatch([resultHandler = WTFMove(resultHandler)] () mutable {
+                    resultHandler(ContentLayerResults::Succeeded);
                 });
             });
         });
@@ -714,7 +712,7 @@ void VideoPresentationManager::setVideoLayerGravityEnum(PlaybackSessionContextId
     model->setVideoLayerGravity((MediaPlayerEnums::VideoGravity)gravity);
 }
 
-void VideoPresentationManager::fullscreenMayReturnToInline(PlaybackSessionContextIdentifier contextId, bool isPageVisible)
+void VideoPresentationManager::fullscreenMayReturnToInline(PlaybackSessionContextIdentifier contextId, bool isPageVisible, FullscreenMayReturnToInlineHandler&& completionHandler)
 {
     if (!m_page)
         return;
@@ -724,7 +722,7 @@ void VideoPresentationManager::fullscreenMayReturnToInline(PlaybackSessionContex
     if (!isPageVisible)
         model->videoElement()->scrollIntoViewIfNotVisible(false);
     RefPtr videoElement = model->videoElement();
-    RefPtr { m_page.get() }->send(Messages::VideoPresentationManagerProxy::PreparedToReturnToInline(contextId, true, inlineVideoFrame(*videoElement)));
+    completionHandler(inlineVideoFrame(*videoElement));
 }
 
 void VideoPresentationManager::requestRouteSharingPolicyAndContextUID(PlaybackSessionContextIdentifier contextId, CompletionHandler<void(WebCore::RouteSharingPolicy, String)>&& reply)

@@ -152,6 +152,11 @@ public:
 
     bool videoElementInPictureInPicture() const { return !!m_videoElementInPictureInPicture; }
 
+    enum class ContentLayerResults : bool {
+        Failed,
+        Succeeded,
+    };
+
 protected:
     friend class VideoPresentationInterfaceContext;
 
@@ -174,8 +179,10 @@ protected:
     // Messages from VideoPresentationManagerProxy
     void requestFullscreenMode(PlaybackSessionContextIdentifier, WebCore::HTMLMediaElementEnums::VideoFullscreenMode, bool finishedWithMedia);
     void requestUpdateInlineRect(PlaybackSessionContextIdentifier);
-    void requestVideoContentLayer(PlaybackSessionContextIdentifier);
-    void returnVideoContentLayer(PlaybackSessionContextIdentifier);
+
+    using ContentLayerResultHandler = CompletionHandler<void(ContentLayerResults)>;
+    void requestVideoContentLayer(PlaybackSessionContextIdentifier, ContentLayerResultHandler&&);
+    void returnVideoContentLayer(PlaybackSessionContextIdentifier, ContentLayerResultHandler&&);
 #if !PLATFORM(IOS_FAMILY)
     void didSetupFullscreen(PlaybackSessionContextIdentifier);
 #endif
@@ -187,7 +194,9 @@ protected:
     void setVideoLayerFrameFenced(PlaybackSessionContextIdentifier, WebCore::FloatRect bounds, WTF::MachSendRight&&);
     void setVideoLayerGravityEnum(PlaybackSessionContextIdentifier, unsigned gravity);
     void fullscreenModeChanged(PlaybackSessionContextIdentifier, WebCore::HTMLMediaElementEnums::VideoFullscreenMode);
-    void fullscreenMayReturnToInline(PlaybackSessionContextIdentifier, bool isPageVisible);
+
+    using FullscreenMayReturnToInlineHandler = CompletionHandler<void(WebCore::FloatRect)>;
+    void fullscreenMayReturnToInline(PlaybackSessionContextIdentifier, bool isPageVisible, FullscreenMayReturnToInlineHandler&&);
     void requestRouteSharingPolicyAndContextUID(PlaybackSessionContextIdentifier, CompletionHandler<void(WebCore::RouteSharingPolicy, String)>&&);
     void ensureUpdatedVideoDimensions(PlaybackSessionContextIdentifier, WebCore::FloatSize existingVideoDimensions);
 
