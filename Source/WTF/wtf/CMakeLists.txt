@@ -251,6 +251,7 @@ set(WTF_PUBLIC_HEADERS
     RobinHoodHashSet.h
     RobinHoodHashTable.h
     RunLoop.h
+    RuntimeApplicationChecks.h
     SHA1.h
     SIMDHelpers.h
     SIMDUTF.h
@@ -259,6 +260,7 @@ set(WTF_PUBLIC_HEADERS
     SchedulePair.h
     Scope.h
     ScopedLambda.h
+    ScopedPrintStream.h
     Seconds.h
     SegmentedVector.h
     SentinelLinkedList.h
@@ -306,6 +308,7 @@ set(WTF_PUBLIC_HEADERS
     TZoneMalloc.h
     TZoneMallocInlines.h
     TaggedArrayStoragePtr.h
+    TaggedPtr.h
     ThreadAssertions.h
     ThreadGroup.h
     ThreadMessage.h
@@ -541,6 +544,7 @@ set(WTF_SOURCES
     RefCountedLeakCounter.cpp
     RefTrackerMixin.cpp
     RunLoop.cpp
+    RuntimeApplicationChecks.cpp
     SHA1.cpp
     SIMDUTF.cpp
     SafeStrerror.cpp

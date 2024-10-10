@@ -150,7 +150,7 @@ public:
     void setPreferences(RefPtr<WebKit::WebPreferences>&&);
 
     WebKit::WebPageProxy* relatedPage() const;
-    void setRelatedPage(WeakPtr<WebKit::WebPageProxy>&&);
+    void setRelatedPage(WeakPtr<WebKit::WebPageProxy>&& relatedPage) { m_data.relatedPage = WTFMove(relatedPage); }
 
     WebKit::WebPageProxy* pageToCloneSessionStorageFrom() const;
     void setPageToCloneSessionStorageFrom(WeakPtr<WebKit::WebPageProxy>&&);
@@ -321,8 +321,8 @@ public:
 #endif
 
 #if ENABLE(APPLE_PAY)
-    bool applePayEnabled() const { return m_data.applePayEnabled; }
-    void setApplePayEnabled(bool enabled) { m_data.applePayEnabled = enabled; }
+    bool applePayEnabled() const;
+    void setApplePayEnabled(bool);
 #endif
 
 #if ENABLE(APP_HIGHLIGHTS)
@@ -452,6 +452,10 @@ public:
     bool overlayRegionsEnabled() const { return m_data.overlayRegionsEnabled; }
     void setOverlayRegionsEnabled(bool value) { m_data.overlayRegionsEnabled = value; }
 #endif // ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
+#if ENABLE(CSS_TRANSFORM_STYLE_SEPARATED)
+    bool cssTransformStyleSeparatedEnabled() const { return m_data.cssTransformStyleSeparatedEnabled; }
+    void setCSSTransformStyleSeparatedEnabled(bool value) { m_data.cssTransformStyleSeparatedEnabled = value; }
+#endif
 
 #endif // PLATFORM(VISION)
 
@@ -595,7 +599,7 @@ private:
         WebCore::UserInterfaceDirectionPolicy userInterfaceDirectionPolicy { WebCore::UserInterfaceDirectionPolicy::Content };
 #endif
 #if ENABLE(APPLE_PAY)
-        bool applePayEnabled { DEFAULT_VALUE_FOR_ApplePayEnabled };
+        std::optional<bool> applePayEnabledOverride;
 #endif
 #if ENABLE(APP_HIGHLIGHTS)
         bool appHighlightsEnabled { DEFAULT_VALUE_FOR_AppHighlightsEnabled };
@@ -636,6 +640,9 @@ private:
 
 #if ENABLE(OVERLAY_REGIONS_IN_EVENT_REGION)
         bool overlayRegionsEnabled { false };
+#endif
+#if ENABLE(CSS_TRANSFORM_STYLE_SEPARATED)
+        bool cssTransformStyleSeparatedEnabled { false };
 #endif
 
 #endif // PLATFORM(VISION)

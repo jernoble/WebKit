@@ -131,7 +131,6 @@
 #include <WebCore/RemoteCommandListener.h>
 #include <WebCore/RenderTreeAsText.h>
 #include <WebCore/ResourceLoadStatistics.h>
-#include <WebCore/RuntimeApplicationChecks.h>
 #include <WebCore/ScriptController.h>
 #include <WebCore/ScriptExecutionContext.h>
 #include <WebCore/SecurityOrigin.h>
@@ -147,6 +146,7 @@
 #include <wtf/Language.h>
 #include <wtf/ProcessPrivilege.h>
 #include <wtf/RunLoop.h>
+#include <wtf/RuntimeApplicationChecks.h>
 #include <wtf/SystemTracing.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/URLParser.h>
@@ -335,10 +335,6 @@ WebProcess::WebProcess()
     addSupplement<RemoteLegacyCDMFactory>();
 #endif
 
-#if ENABLE(ROUTING_ARBITRATION)
-    addSupplement<AudioSessionRoutingArbitrator>();
-#endif
-
 #if ENABLE(GPU_PROCESS)
     addSupplement<RemoteMediaEngineConfigurationFactory>();
 #endif
@@ -426,7 +422,7 @@ void WebProcess::initializeWebProcess(WebProcessCreationParameters&& parameters,
     if (parameters.websiteDataStoreParameters)
         setWebsiteDataStoreParameters(WTFMove(*parameters.websiteDataStoreParameters));
 
-    WebCore::setPresentingApplicationPID(parameters.presentingApplicationPID);
+    setPresentingApplicationPID(parameters.presentingApplicationPID);
 
 #if OS(LINUX)
     MemoryPressureHandler::ReliefLogger::setLoggingEnabled(parameters.shouldEnableMemoryPressureReliefLogging);
@@ -621,7 +617,7 @@ void WebProcess::initializeWebProcess(WebProcessCreationParameters&& parameters,
 #if ENABLE(REMOTE_INSPECTOR) && PLATFORM(COCOA)
     if (std::optional<audit_token_t> auditToken = parentProcessConnection()->getAuditToken()) {
         RetainPtr<CFDataRef> auditData = adoptCF(CFDataCreate(nullptr, (const UInt8*)&*auditToken, sizeof(*auditToken)));
-        Inspector::RemoteInspector::singleton().setParentProcessInformation(WebCore::presentingApplicationPID(), auditData);
+        Inspector::RemoteInspector::singleton().setParentProcessInformation(presentingApplicationPID(), auditData);
     }
     // We need to connect to webinspectord before the first page load for the XPC connection to be successfully opened.
     // This is because we block launchd before the first page load, and launchd is required to establish the connection.
@@ -658,7 +654,7 @@ void WebProcess::initializeWebProcess(WebProcessCreationParameters&& parameters,
     WebCore::NavigatorGamepad::setGamepadsRecentlyAccessedThreshold(WebPageProxy::gamepadsRecentlyAccessedThreshold / 3);
 #endif
 
-    WEBPROCESS_RELEASE_LOG(Process, "initializeWebProcess: Presenting processPID=%d", WebCore::presentingApplicationPID());
+    WEBPROCESS_RELEASE_LOG(Process, "initializeWebProcess: Presenting processPID=%d", presentingApplicationPID());
 }
 
 void WebProcess::setWebsiteDataStoreParameters(WebProcessDataStoreParameters&& parameters)
@@ -1047,21 +1043,17 @@ WebPageGroupProxy* WebProcess::webPageGroup(const WebPageGroupData& pageGroupDat
     return result.iterator->value.get();
 }
 
-static uint64_t nextUserGestureTokenIdentifier()
-{
-    static uint64_t identifier = 1;
-    return identifier++;
-}
-
-uint64_t WebProcess::userGestureTokenIdentifier(std::optional<PageIdentifier> pageID, RefPtr<UserGestureToken> token)
+std::optional<WebCore::UserGestureTokenIdentifier> WebProcess::userGestureTokenIdentifier(std::optional<PageIdentifier> pageID, RefPtr<UserGestureToken> token)
 {
     if (!pageID)
-        return 0;
+        return std::nullopt;
 
     if (!token || !token->processingUserGesture())
-        return 0;
+        return std::nullopt;
 
-    auto result = m_userGestureTokens.ensure(*token, [] { return nextUserGestureTokenIdentifier(); });
+    auto result = m_userGestureTokens.ensure(*token, [] {
+        return UserGestureTokenIdentifier::generate();
+    });
     if (result.isNewEntry) {
         result.iterator->key.addDestructionObserver([pageID] (UserGestureToken& tokenBeingDestroyed) {
             WebProcess::singleton().userGestureTokenDestroyed(*pageID, tokenBeingDestroyed);
@@ -2408,6 +2400,18 @@ void WebProcess::updateCachedCookiesEnabled()
 bool WebProcess::requiresScriptTelemetryForURL(const URL& url, const WebCore::SecurityOrigin& topOrigin) const
 {
     return m_scriptTelemetryFilter && m_scriptTelemetryFilter->matches(url, topOrigin);
+}
+
+void WebProcess::enableMediaPlayback()
+{
+#if USE(AUDIO_SESSION)
+    if (!WebCore::AudioSession::enableMediaPlayback())
+        return;
+#endif
+
+#if ENABLE(ROUTING_ARBITRATION)
+    m_routingArbitrator = makeUnique<AudioSessionRoutingArbitrator>(*this);
+#endif
 }
 
 #if ENABLE(GPU_PROCESS) && ENABLE(VIDEO)

@@ -1421,7 +1421,6 @@ webkit.org/b/178487 compositing/fixed-with-fixed-layout.html [ Failure ]
 webkit.org/b/178487 compositing/geometry/limit-layer-bounds-opacity-transition.html [ Failure ]
 webkit.org/b/178487 compositing/geometry/video-fixed-scrolling.html [ Pass Failure ]
 webkit.org/b/178487 compositing/iframes/composited-iframe-scroll.html [ Failure ]
-webkit.org/b/178487 compositing/iframes/iframe-content-flipping.html [ Failure ]
 webkit.org/b/178487 compositing/iframes/layout-on-compositing-change.html [ Failure ]
 webkit.org/b/178487 compositing/layer-creation/fixed-overlap-extent-rtl.html [ Failure ]
 webkit.org/b/178487 compositing/layer-creation/fixed-overlap-extent.html [ Failure ]
@@ -1439,6 +1438,10 @@ webkit.org/b/178487 compositing/rtl/rtl-iframe-fixed-overflow-scrolled.html [ Fa
 webkit.org/b/178487 compositing/rtl/rtl-iframe-fixed-overflow.html [ Failure ]
 webkit.org/b/178487 compositing/masks/compositing-clip-path-on-subpixel-position.html [ ImageOnlyFailure ]
 webkit.org/b/178487 compositing/video/video-clip-change-src.html [ ImageOnlyFailure ]
+
+# No scrollbars on iOS
+compositing/iframes/iframe-content-flipping.html [ Failure ]
+compositing/iframes/iframe-scrolling-change.html [ Failure ]
 
 # CSS tests to triage
 webkit.org/b/178588 css3/zoom-coords.xhtml [ Failure ]
@@ -7074,9 +7077,9 @@ webkit.org/b/196233 fast/viewport/ios/initial-scale-after-changing-view-scale.ht
 
 webkit.org/b/162975 http/tests/cache/disk-cache/memory-cache-revalidation-updates-disk-cache.html [ Pass Failure ]
 
-webkit.org/b/196112 imported/w3c/web-platform-tests/mathml/relations/css-styling/mathvariant-bold.html [ Pass ImageOnlyFailure ]
-webkit.org/b/196112 imported/w3c/web-platform-tests/mathml/relations/css-styling/mathvariant-double-struck.html [ Pass ImageOnlyFailure ]
-webkit.org/b/196112 imported/w3c/web-platform-tests/mathml/relations/css-styling/mathvariant-italic.html [ Pass ImageOnlyFailure ]
+webkit.org/b/196112 mathml/non-core/mathvariant/mathvariant-bold.html [ Pass ImageOnlyFailure ]
+webkit.org/b/196112 mathml/non-core/mathvariant/mathvariant-double-struck.html [ Pass ImageOnlyFailure ]
+webkit.org/b/196112 mathml/non-core/mathvariant/mathvariant-italic.html [ Pass ImageOnlyFailure ]
 
 http/wpt/cache-storage/quota-third-party.https.html [ Slow ]
 http/wpt/fetch/response-opaque-clone.html [ Slow ]
@@ -7330,8 +7333,8 @@ imported/w3c/web-platform-tests/mathml/presentation-markup/operators/embellished
 imported/w3c/web-platform-tests/mathml/presentation-markup/operators/embellished-op-4-2.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/mathml/presentation-markup/operators/embellished-op-4-3.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/mathml/presentation-markup/operators/mo-minsize-maxsize-legacy-length-values.html [ Failure ]
-imported/w3c/web-platform-tests/mathml/relations/css-styling/padding-border-margin/padding-border-margin-003.html [ ImageOnlyFailure ]
 imported/w3c/web-platform-tests/mathml/relations/html5-tree/tabindex-002.tentative.html [ Skip ]
+imported/w3c/web-platform-tests/mathml/relations/css-styling/mozilla-393760-1.xml [ ImageOnlyFailure ]
 
 webkit.org/b/277195 imported/w3c/web-platform-tests/html/semantics/interactive-elements/the-dialog-element/inert-label-focus.html [ Failure ]
 
@@ -7488,3 +7491,8 @@ webkit.org/b/257011 imported/w3c/web-platform-tests/css/css-text/hyphens/hyphena
 
 # webkit.org/b/280556 [ macOS iOS wk2 release ] webrtc/stats-timestamp-increases.html is a flaky failure.
 [ Release ] webrtc/stats-timestamp-increases.html  [ Pass Failure ]
+
+# webkit.org/b/281089 REGRESSION(284750@main): [macOS iOS Debug] ASSERTION FAILED: !child->frameID() in http/tests/site-isolation/draw-after-cross-origin-navigation-between-two-remote-frames.html
+[ Debug ] http/tests/site-isolation/draw-after-cross-origin-navigation-between-two-remote-frames.html [ Pass Timeout ImageOnlyFailure ]
+
+webkit.org/b/281238 compositing/tiling/tile-cache-zoomed.html [ Failure ]

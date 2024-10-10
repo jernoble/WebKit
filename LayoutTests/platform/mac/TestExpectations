@@ -1331,9 +1331,9 @@ webkit.org/b/195466 imported/w3c/web-platform-tests/html/semantics/embedded-cont
 webkit.org/b/153588 imported/w3c/web-platform-tests/media-source/mediasource-correct-frames.html [ Skip ]
 webkit.org/b/153588 imported/w3c/web-platform-tests/media-source/mediasource-correct-frames-after-reappend.html [ Skip ]
 
-webkit.org/b/196112 imported/w3c/web-platform-tests/mathml/relations/css-styling/mathvariant-bold.html [ Pass ImageOnlyFailure ]
-webkit.org/b/196112 imported/w3c/web-platform-tests/mathml/relations/css-styling/mathvariant-double-struck.html [ Pass ImageOnlyFailure ]
-webkit.org/b/196112 imported/w3c/web-platform-tests/mathml/relations/css-styling/mathvariant-italic.html [ Pass ImageOnlyFailure ]
+webkit.org/b/196112 mathml/non-core/mathvariant/mathvariant-bold.html [ Pass ImageOnlyFailure ]
+webkit.org/b/196112 mathml/non-core/mathvariant/mathvariant-double-struck.html [ Pass ImageOnlyFailure ]
+webkit.org/b/196112 mathml/non-core/mathvariant/mathvariant-italic.html [ Pass ImageOnlyFailure ]
 
 webkit.org/b/19650 accessibility/mac/press-not-work-for-disabled-menu-list.html [ Pass Failure ]
 
@@ -1661,6 +1661,8 @@ media/media-source/media-source-unnecessary-seek-seeked.html [ Pass Failure ]
 
 # imported/w3c/web-platform-tests/mathml/presentation-markup/operators/mo-stretch-properties-dynamic-001.html is flaky
 webkit.org/b/228094 imported/w3c/web-platform-tests/mathml/presentation-markup/operators/mo-stretch-properties-dynamic-001.html [ Pass Failure ]
+
+imported/w3c/web-platform-tests/mathml/relations/css-styling/table-width-1.xhtml [ ImageOnlyFailure Pass ]
 
 media/media-source/media-source-webm-vp8-malformed-header.html [ Pass ]
 
@@ -2407,17 +2409,17 @@ imported/w3c/web-platform-tests/html/semantics/embedded-content/the-img-element/
 [ Sequoia ] fast/ruby/ruby-expansion-cjk-4.html [ ImageOnlyFailure ]
 
 # webkit.org/b/280378 [ Sequoia arm64 ] 14x http/tests/media/fairplay/* are constant failures
-[ Sequoia arm64 Release ] http/tests/media/fairplay/fps-hls-key-rotation.html [ Failure ]
-[ Sequoia arm64 Release ] http/tests/media/fairplay/fps-hls-update-reject.html [ Failure ]
-[ Sequoia arm64 Release ] http/tests/media/fairplay/fps-hls.html [ Failure ]
-[ Sequoia arm64 Release ] http/tests/media/fairplay/fps-init-data-cenc.html [ Failure ]
-[ Sequoia arm64 Release ] http/tests/media/fairplay/fps-init-data-sinf.html [ Failure ]
-[ Sequoia arm64 Release ] http/tests/media/fairplay/fps-init-data-skd.html [ Failure ]
-[ Sequoia arm64 Release ] http/tests/media/fairplay/fps-mse-play-while-not-in-dom.html [ Failure ]
-[ Sequoia arm64 Release ] http/tests/media/fairplay/fps-mse-unmuxed-audio-only.html [ Failure ]
-[ Sequoia arm64 Release ] http/tests/media/fairplay/fps-mse-unmuxed-key-renewal.html [ Failure ]
-[ Sequoia arm64 Release ] http/tests/media/fairplay/fps-mse-unmuxed-multiple-keys.html [ Failure ]
-[ Sequoia arm64 Release ] http/tests/media/fairplay/fps-mse-unmuxed-same-key.html [ Failure ]
+[ Sequoia arm64 ] http/tests/media/fairplay/fps-hls-key-rotation.html [ Failure ]
+[ Sequoia arm64 ] http/tests/media/fairplay/fps-hls-update-reject.html [ Failure ]
+[ Sequoia arm64 ] http/tests/media/fairplay/fps-hls.html [ Failure ]
+[ Sequoia arm64 ] http/tests/media/fairplay/fps-init-data-cenc.html [ Failure ]
+[ Sequoia arm64 ] http/tests/media/fairplay/fps-init-data-sinf.html [ Failure ]
+[ Sequoia arm64 ] http/tests/media/fairplay/fps-init-data-skd.html [ Failure ]
+[ Sequoia arm64 ] http/tests/media/fairplay/fps-mse-play-while-not-in-dom.html [ Failure ]
+[ Sequoia arm64 ] http/tests/media/fairplay/fps-mse-unmuxed-audio-only.html [ Failure ]
+[ Sequoia arm64 ] http/tests/media/fairplay/fps-mse-unmuxed-key-renewal.html [ Failure ]
+[ Sequoia arm64 ] http/tests/media/fairplay/fps-mse-unmuxed-multiple-keys.html [ Failure ]
+[ Sequoia arm64 ] http/tests/media/fairplay/fps-mse-unmuxed-same-key.html [ Failure ]
 http/tests/media/fairplay/fps-mse-multi-key-renewal.html [ Pass Failure ] 
 
 # webkit.org/b/280424 [ Sequoia ] fast/table/col-and-colgroup-offsets.html is a constant failure.
@@ -2432,3 +2434,6 @@ webkit.org/b/280792 inspector/worker/debugger-pause-subworker.html [ Skip ]
 
 # webkit.org/b/280985 [macOS Debug]: media/track/track-text-track-destructor-crash.html is a flaky crash (failure in EWS)
 [ Debug ] media/track/track-text-track-destructor-crash.html [ Pass Crash ]
+
+# webkit.org/b/281097 [ Sequoia ] imported/w3c/web-platform-tests/html/semantics/embedded-content/media-elements/mime-types/canPlayType.html is a constant failure. 
+[ Sequoia+ ] imported/w3c/web-platform-tests/html/semantics/embedded-content/media-elements/mime-types/canPlayType.html [ Failure ]

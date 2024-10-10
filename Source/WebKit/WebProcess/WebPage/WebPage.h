@@ -725,6 +725,15 @@ public:
     double totalScaleFactor() const;
     double viewScaleFactor() const;
 
+#if ENABLE(PDF_PLUGIN)
+    void setPluginScaleFactor(double scaleFactor, WebCore::IntPoint origin);
+
+#if PLATFORM(IOS_FAMILY)
+    void didInitializePlugin();
+#endif
+
+#endif
+
     void didScalePage(double scale, const WebCore::IntPoint& origin);
     void didScalePageInViewCoordinates(double scale, const WebCore::IntPoint& origin);
     void didScalePageRelativeToScrollPosition(double scale, const WebCore::IntPoint& origin);
@@ -1036,6 +1045,7 @@ public:
     void unfreezeLayerTree(LayerTreeFreezeReason);
 
     void updateFrameSize(WebCore::FrameIdentifier, WebCore::IntSize);
+    void frameCompositedBoundsChanged(WebCore::FrameIdentifier, WebCore::IntPoint);
 
     void markLayersVolatile(CompletionHandler<void(bool)>&& completionHandler = { });
     void cancelMarkLayersVolatile();
@@ -1807,6 +1817,10 @@ public:
     void createTextIndicatorForTextAnimationID(const WTF::UUID&, CompletionHandler<void(std::optional<WebCore::TextIndicatorData>&&)>&&);
 
     void didEndPartialIntelligenceTextAnimation();
+#endif
+
+#if PLATFORM(COCOA)
+    void createTextIndicatorForElementWithID(const String& elementID, CompletionHandler<void(std::optional<WebCore::TextIndicatorData>&&)>&&);
 #endif
 
     void startObservingNowPlayingMetadata();

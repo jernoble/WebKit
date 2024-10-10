@@ -110,7 +110,6 @@
 #import <WebCore/ProtectionSpace.h>
 #import <WebCore/ResourceError.h>
 #import <WebCore/ResourceRequest.h>
-#import <WebCore/RuntimeApplicationChecks.h>
 #import <WebCore/ScriptController.h>
 #import <WebCore/SharedBuffer.h>
 #import <WebCore/SubresourceLoader.h>
@@ -128,6 +127,7 @@
 #import <wtf/NakedPtr.h>
 #import <wtf/Ref.h>
 #import <wtf/RunLoop.h>
+#import <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #import <wtf/cocoa/VectorCocoa.h>
 #import <wtf/text/WTFString.h>
 
@@ -349,7 +349,7 @@ void WebFrameLoaderClient::dispatchWillSendRequest(WebCore::DocumentLoader* load
     NSURLRequest *currentURLRequest = request.nsURLRequest(WebCore::HTTPBodyUpdatePolicy::UpdateHTTPBody);
 
 #if PLATFORM(MAC)
-    if (WebCore::MacApplication::isAppleMail() && loader->substituteData().isValid()) {
+    if (WTF::MacApplication::isAppleMail() && loader->substituteData().isValid()) {
         // Mail.app checks for this property to detect data / archive loads.
         [NSURLProtocol setProperty:@"" forKey:@"WebDataRequest" inRequest:(NSMutableURLRequest *)currentURLRequest];
     }
@@ -981,7 +981,7 @@ void WebFrameLoaderClient::setMainFrameDocumentReady(bool ready)
     [getWebView(m_webFrame.get()) setMainFrameDocumentReady:ready];
 }
 
-void WebFrameLoaderClient::startDownload(const WebCore::ResourceRequest& request, const String& /* suggestedName */)
+void WebFrameLoaderClient::startDownload(const WebCore::ResourceRequest& request, const String& /* suggestedName */, WebCore::FromDownloadAttribute)
 {
     // FIXME: Should download full request.
     [getWebView(m_webFrame.get()) _downloadURL:request.url()];

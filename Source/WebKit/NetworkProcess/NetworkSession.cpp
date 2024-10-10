@@ -55,9 +55,9 @@
 #include "WebSocketTask.h"
 #include <WebCore/CookieJar.h>
 #include <WebCore/ResourceRequest.h>
-#include <WebCore/RuntimeApplicationChecks.h>
 #include <WebCore/SWServer.h>
 #include <numeric>
+#include <wtf/RuntimeApplicationChecks.h>
 #include <wtf/TZoneMallocInlines.h>
 
 #if PLATFORM(COCOA)
@@ -106,11 +106,11 @@ NetworkStorageSession* NetworkSession::networkStorageSession() const
     return storageSession;
 }
 
-static UniqueRef<PCM::ManagerInterface> managerOrProxy(NetworkSession& networkSession, NetworkProcess& networkProcess, const NetworkSessionCreationParameters& parameters)
+static Ref<PCM::ManagerInterface> managerOrProxy(NetworkSession& networkSession, NetworkProcess& networkProcess, const NetworkSessionCreationParameters& parameters)
 {
     if (!parameters.pcmMachServiceName.isEmpty() && !networkSession.sessionID().isEphemeral())
-        return makeUniqueRef<PCM::ManagerProxy>(parameters.pcmMachServiceName, networkSession);
-    return makeUniqueRef<PrivateClickMeasurementManager>(makeUniqueRef<PCM::ClientImpl>(networkSession, networkProcess), parameters.resourceLoadStatisticsParameters.directory);
+        return PCM::ManagerProxy::create(parameters.pcmMachServiceName, networkSession);
+    return PrivateClickMeasurementManager::create(makeUniqueRef<PCM::ClientImpl>(networkSession, networkProcess), parameters.resourceLoadStatisticsParameters.directory);
 }
 
 static Ref<NetworkStorageManager> createNetworkStorageManager(NetworkProcess& networkProcess, const NetworkSessionCreationParameters& parameters)
@@ -401,7 +401,7 @@ void NetworkSession::handlePrivateClickMeasurementConversion(WebCore::PCM::Attri
     String appBundleID = WTFMove(attributedBundleIdentifier);
 #if PLATFORM(COCOA)
     if (appBundleID.isEmpty())
-        appBundleID = WebCore::applicationBundleIdentifier();
+        appBundleID = applicationBundleIdentifier();
 #endif
 
     if (!m_ephemeralMeasurement && m_sessionID.isEphemeral())
@@ -535,10 +535,10 @@ void NetworkSession::allowTLSCertificateChainForLocalPCMTesting(const WebCore::C
 void NetworkSession::setPrivateClickMeasurementAppBundleIDForTesting(String&& appBundleIDForTesting)
 {
 #if PLATFORM(COCOA)
-    auto appBundleID = WebCore::applicationBundleIdentifier();
+    auto appBundleID = applicationBundleIdentifier();
     if (!isRunningTest(appBundleID))
         WTFLogAlways("isRunningTest() returned false. appBundleID is %s.", appBundleID.isEmpty() ? "empty" : appBundleID.utf8().data());
-    RELEASE_ASSERT(isRunningTest(WebCore::applicationBundleIdentifier()));
+    RELEASE_ASSERT(isRunningTest(applicationBundleIdentifier()));
 #endif
     privateClickMeasurement().setPrivateClickMeasurementAppBundleIDForTesting(WTFMove(appBundleIDForTesting));
 }

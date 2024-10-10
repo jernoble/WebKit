@@ -245,11 +245,6 @@ WebPageProxy* PageConfiguration::relatedPage() const
     return m_data.relatedPage.get();
 }
 
-void PageConfiguration::setRelatedPage(WeakPtr<WebPageProxy>&& relatedPage)
-{
-    m_data.relatedPage = WTFMove(relatedPage);
-}
-
 WebPageProxy* PageConfiguration::pageToCloneSessionStorageFrom() const
 {
     return m_data.pageToCloneSessionStorageFrom.get();
@@ -374,6 +369,23 @@ void PageConfiguration::setApplicationManifest(RefPtr<ApplicationManifest>&& app
 {
     m_data.applicationManifest = WTFMove(applicationManifest);
 }
+#endif
+
+#if ENABLE(APPLE_PAY)
+
+bool PageConfiguration::applePayEnabled() const
+{
+    if (auto applePayEnabledOverride = m_data.applePayEnabledOverride)
+        return *applePayEnabledOverride;
+
+    return preferences().applePayEnabled();
+}
+
+void PageConfiguration::setApplePayEnabled(bool enabled)
+{
+    m_data.applePayEnabledOverride = enabled;
+}
+
 #endif
 
 } // namespace API

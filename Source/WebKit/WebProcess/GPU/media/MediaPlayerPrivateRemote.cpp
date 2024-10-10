@@ -1010,12 +1010,13 @@ void MediaPlayerPrivateRemote::load(const URL& url, const ContentType& contentTy
         || (platformStrategies()->mediaStrategy().mockMediaSourceEnabled() && m_remoteEngineIdentifier == MediaPlayerEnums::MediaEngineIdentifier::MockMSE)) {
 
         RefPtr mediaSourcePrivate = downcast<MediaSourcePrivateRemote>(client.mediaSourcePrivate());
-        RemoteMediaSourceIdentifier identifier;
-        if (mediaSourcePrivate) {
-            mediaSourcePrivate->setPlayer(this);
-            identifier = mediaSourcePrivate->identifier();
-        } else
-            identifier = RemoteMediaSourceIdentifier::generate();
+        RemoteMediaSourceIdentifier identifier = [&] {
+            if (mediaSourcePrivate) {
+                mediaSourcePrivate->setPlayer(this);
+                return mediaSourcePrivate->identifier();
+            }
+            return RemoteMediaSourceIdentifier::generate();
+        }();
         connection().sendWithAsyncReply(Messages::RemoteMediaPlayerProxy::LoadMediaSource(url, contentType, DeprecatedGlobalSettings::webMParserEnabled(), identifier), [weakThis = ThreadSafeWeakPtr { *this }, this](RemoteMediaPlayerConfiguration&& configuration) {
             RefPtr protectedThis = weakThis.get();
             if (!protectedThis)
@@ -1848,6 +1849,12 @@ bool MediaPlayerPrivateRemote::supportsLinearMediaPlayer() const
     return false;
 }
 #endif
+
+void MediaPlayerPrivateRemote::audioOutputDeviceChanged()
+{
+    if (RefPtr player = m_player.get())
+        protectedConnection()->send(Messages::RemoteMediaPlayerProxy::AudioOutputDeviceChanged { player->audioOutputDeviceId() }, m_id);
+}
 
 void MediaPlayerPrivateRemote::commitAllTransactions(CompletionHandler<void()>&& completionHandler)
 {

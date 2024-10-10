@@ -673,9 +673,14 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
     auto shouldBlockMobileAsset = parameters.store.getBoolValueForKey(WebPreferencesKey::blockMobileAssetInWebContentSandboxKey());
     if (shouldBlockMobileAsset)
         sandbox_enable_state_flag("BlockMobileAssetInWebContentSandbox", *auditToken);
+#if PLATFORM(MAC)
+    auto shouldBlockIconServices = parameters.store.getBoolValueForKey(WebPreferencesKey::blockIconServicesInWebContentSandboxKey());
+    if (shouldBlockIconServices)
+        sandbox_enable_state_flag("BlockIconServicesInWebContentSandbox", *auditToken);
     auto shouldBlockOpenDirectory = parameters.store.getBoolValueForKey(WebPreferencesKey::blockOpenDirectoryInWebContentSandboxKey());
     if (shouldBlockOpenDirectory)
         sandbox_enable_state_flag("BlockOpenDirectoryInWebContentSandbox", *auditToken);
+#endif // PLATFORM(MAC)
 #endif // HAVE(SANDBOX_STATE_FLAGS)
     auto shouldBlockIOKit = parameters.store.getBoolValueForKey(WebPreferencesKey::blockIOKitInWebContentSandboxKey())
 #if ENABLE(WEBGL)
@@ -2704,6 +2709,14 @@ void WebPage::scaleView(double scale)
     send(Messages::WebPageProxy::ViewScaleFactorDidChange(scale));
 }
 
+#if ENABLE(PDF_PLUGIN)
+void WebPage::setPluginScaleFactor(double scaleFactor, WebCore::IntPoint origin)
+{
+    if (RefPtr plugin = mainFramePlugIn())
+        plugin->setPageScaleFactor(scaleFactor, origin);
+}
+#endif
+
 void WebPage::setDeviceScaleFactor(float scaleFactor)
 {
     if (scaleFactor == m_page->deviceScaleFactor())
@@ -3385,6 +3398,28 @@ void WebPage::updateFrameSize(WebCore::FrameIdentifier frameID, WebCore::IntSize
         drawingArea->triggerRenderingUpdate();
     }
 }
+
+void WebPage::frameCompositedBoundsChanged(WebCore::FrameIdentifier frameID, WebCore::IntPoint contentsOffset)
+{
+    if (!m_page)
+        return;
+
+    ASSERT(m_page->settings().siteIsolationEnabled());
+    RefPtr webFrame = WebProcess::singleton().webFrame(frameID);
+    if (!webFrame)
+        return;
+
+    RefPtr frame = webFrame->coreLocalFrame();
+    if (!frame)
+        return;
+
+    RefPtr frameView = frame->view();
+    if (!frameView)
+        return;
+
+    frameView->compositedBoundsChanged(contentsOffset);
+}
+
 
 void WebPage::tryMarkLayersVolatile(CompletionHandler<void(bool)>&& completionHandler)
 {
@@ -4789,11 +4824,6 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
         modelProcessConnection->connection().setIgnoreInvalidMessageForTesting();
 #endif // ENABLE(MODEL_PROCESS)
 #endif // ENABLE(IPC_TESTING_API)
-
-#if ENABLE(WEB_AUTHN) && (PLATFORM(IOS) || PLATFORM(VISION))
-    if (isParentProcessAWebBrowser())
-        settings.setWebAuthenticationEnabled(true);
-#endif
     
 #if ENABLE(ALTERNATE_WEBM_PLAYER)
     PlatformMediaSessionManager::setAlternateWebMPlayerEnabled(settings.alternateWebMPlayerEnabled());
@@ -5645,8 +5675,8 @@ void WebPage::setActiveDateTimeChooser(WebDateTimeChooser& dateTimeChooser)
 
 void WebPage::didChooseDate(const String& date)
 {
-    if (m_activeDateTimeChooser)
-        m_activeDateTimeChooser->didChooseDate(date);
+    if (RefPtr activeDateTimeChooser = m_activeDateTimeChooser.get())
+        activeDateTimeChooser->didChooseDate(date);
 }
 
 void WebPage::didEndDateTimePicker()

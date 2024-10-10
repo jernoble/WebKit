@@ -105,6 +105,7 @@ public:
     WebCore::PageIdentifier webPageID() const { return m_webPageID; }
     WebFrameProxy* mainFrame() const { return m_mainFrame.get(); }
     BrowsingContextGroup& browsingContextGroup() { return m_browsingContextGroup.get(); }
+    Ref<BrowsingContextGroup> protectedBrowsingContextGroup();
     WebProcessProxy& process();
     Ref<WebProcessProxy> protectedProcess();
     ProcessSwapRequestedByClient processSwapRequestedByClient() const { return m_processSwapRequestedByClient; }
@@ -234,7 +235,7 @@ private:
     CompletionHandler<void(String&&)> m_accessibilityBindCompletionHandler;
 #endif
 #if USE(RUNNINGBOARD)
-    UniqueRef<ProcessThrottler::ForegroundActivity> m_provisionalLoadActivity;
+    Ref<ProcessThrottler::ForegroundActivity> m_provisionalLoadActivity;
 #endif
 #if HAVE(VISIBILITY_PROPAGATION_VIEW)
     LayerHostingContextID m_contextIDForVisibilityPropagationInWebProcess { 0 };

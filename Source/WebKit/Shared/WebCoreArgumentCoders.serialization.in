@@ -2525,6 +2525,7 @@ class WebCore::SelectionGeometry {
     bool containsStart();
     bool containsEnd();
     bool isHorizontal();
+    bool mayAppearLogicallyDiscontiguous();
 };
 #endif
 
@@ -5025,7 +5026,8 @@ enum class WebCore::CrossOriginOpenerPolicyValue : uint8_t {
     UnsafeNone,
     SameOrigin,
     SameOriginPlusCOEP,
-    SameOriginAllowPopups
+    SameOriginAllowPopups,
+    NoopenerAllowPopups
 };
 
 struct WebCore::CrossOriginOpenerPolicy {

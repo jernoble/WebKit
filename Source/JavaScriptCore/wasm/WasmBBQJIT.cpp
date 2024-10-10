@@ -674,6 +674,7 @@ BBQJIT::BBQJIT(CCallHelpers& jit, const TypeDefinition& signature, BBQCallee& ca
     , m_info(info)
     , m_mode(mode)
     , m_unlinkedWasmToWasmCalls(unlinkedWasmToWasmCalls)
+    , m_directCallees(m_info.internalFunctionCount())
     , m_hasExceptionHandlers(hasExceptionHandlers)
     , m_loopIndexForOSREntry(loopIndexForOSREntry)
     , m_gprBindings(jit.numberOfRegisters(), RegisterBinding::none())
@@ -2961,10 +2962,9 @@ void BBQJIT::emitEntryTierUpCheck()
     m_jit.move(TrustedImmPtr(bitwise_cast<uintptr_t>(&m_callee.tierUpCounter().m_counter)), wasmScratchGPR);
     Jump tierUp = m_jit.branchAdd32(CCallHelpers::PositiveOrZero, TrustedImm32(TierUpCount::functionEntryIncrement()), Address(wasmScratchGPR));
     MacroAssembler::Label tierUpResume = m_jit.label();
-    auto functionIndex = m_functionIndex;
-    addLatePath([tierUp, tierUpResume, functionIndex](BBQJIT& generator, CCallHelpers& jit) {
+    addLatePath([tierUp, tierUpResume](BBQJIT& generator, CCallHelpers& jit) {
         tierUp.link(&jit);
-        jit.move(TrustedImm32(functionIndex), GPRInfo::nonPreservedNonArgumentGPR0);
+        jit.move(GPRInfo::callFrameRegister, GPRInfo::nonPreservedNonArgumentGPR0);
         jit.nearCallThunk(CodeLocationLabel<JITThunkPtrTag>(Thunks::singleton().stub(triggerOMGEntryTierUpThunkGenerator(generator.m_usesSIMD)).code()));
         jit.jump(tierUpResume);
     });
@@ -2992,6 +2992,7 @@ ControlData WARN_UNUSED_RETURN BBQJIT::addTopLevel(BlockSignature signature)
     m_jit.emitFunctionPrologue();
     m_topLevel = ControlData(*this, BlockType::TopLevel, signature, 0);
 
+    JIT_COMMENT(m_jit, "Store boxed JIT callee");
     m_jit.move(CCallHelpers::TrustedImmPtr(CalleeBits::boxNativeCallee(&m_callee)), wasmScratchGPR);
     static_assert(CallFrameSlot::codeBlock + 1 == CallFrameSlot::callee);
     if constexpr (is32Bit()) {
@@ -3619,38 +3620,6 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addThrow(unsigned exceptionIndex, Argum
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addThrowRef(Value exception, Stack&)
-{
-
-    LOG_INSTRUCTION("ThrowRef", exception);
-
-    if constexpr (isARM_THUMB2())
-        emitMove(exception, Location::fromGPR2(wasmScratchGPR, GPRInfo::argumentGPR1));
-    else
-        emitMove(exception, Location::fromGPR(GPRInfo::argumentGPR1));
-    consume(exception);
-
-    ++m_callSiteIndex;
-    bool mayHaveExceptionHandlers = !m_hasExceptionHandlers || m_hasExceptionHandlers.value();
-    if (mayHaveExceptionHandlers) {
-        m_jit.store32(CCallHelpers::TrustedImm32(m_callSiteIndex), CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
-        flushRegisters();
-    }
-
-    // Check for a null exception
-    m_jit.move(CCallHelpers::TrustedImmPtr(JSValue::encode(jsNull())), wasmScratchGPR);
-    auto nullexn = m_jit.branchPtr(CCallHelpers::Equal, GPRInfo::argumentGPR1, wasmScratchGPR);
-
-    m_jit.move(GPRInfo::wasmContextInstancePointer, GPRInfo::argumentGPR0);
-    emitThrowRefImpl(m_jit);
-
-    nullexn.linkTo(m_jit.label(), &m_jit);
-
-    emitThrowException(ExceptionType::NullExnReference);
-
-    return { };
-}
-
 void BBQJIT::prepareForExceptions()
 {
     ++m_callSiteIndex;
@@ -4144,10 +4113,9 @@ void BBQJIT::emitTailCall(FunctionSpaceIndex functionIndex, const TypeDefinition
     m_jit.loadPtr(Address(MacroAssembler::framePointerRegister), callerFramePointer);
     resolvedArguments.append(Value::pinned(pointerType(), Location::fromStack(sizeof(Register))));
     parameterLocations.append(Location::fromStack(tailCallStackOffsetFromFP + Checked<int>(sizeof(Register))));
-#elif CPU(ARM64)
+#elif CPU(ARM64) || CPU(ARM_THUMB2)
     m_jit.loadPairPtr(MacroAssembler::framePointerRegister, callerFramePointer, MacroAssembler::linkRegister);
 #else
-    // FIXME: add support for armv7
     UNUSED_PARAM(callerFramePointer);
     UNREACHABLE_FOR_PLATFORM();
 #endif
@@ -4164,14 +4132,15 @@ void BBQJIT::emitTailCall(FunctionSpaceIndex functionIndex, const TypeDefinition
         consume(arguments[i]);
     }
 
-    for (const auto& param : callInfo.params) {
+    for (size_t i = 0; i < callInfo.params.size(); ++i) {
+        auto param = callInfo.params[i];
         switch (param.location.kind()) {
         case ValueLocation::Kind::GPRRegister:
-            parameterLocations.append(Location::fromGPR(param.location.jsr().payloadGPR()));
+        case ValueLocation::Kind::FPRRegister: {
+            auto type = signature.as<FunctionSignature>()->argumentType(i);
+            parameterLocations.append(Location::fromArgumentLocation(param, type.kind));
             break;
-        case ValueLocation::Kind::FPRRegister:
-            parameterLocations.append(Location::fromFPR(param.location.fpr()));
-            break;
+        }
         case ValueLocation::Kind::StackArgument:
             RELEASE_ASSERT_NOT_REACHED();
             break;
@@ -4194,7 +4163,7 @@ void BBQJIT::emitTailCall(FunctionSpaceIndex functionIndex, const TypeDefinition
 
     // Fix SP and FP
     m_jit.addPtr(TrustedImm32(tailCallStackOffsetFromFP + Checked<int32_t>(prologueStackPointerDelta())), MacroAssembler::framePointerRegister, MacroAssembler::stackPointerRegister);
-    m_jit.move(scratches.gpr(0), MacroAssembler::framePointerRegister);
+    m_jit.move(callerFramePointer, MacroAssembler::framePointerRegister);
 
     // Nothing should refer to FP after this point.
 
@@ -4203,6 +4172,8 @@ void BBQJIT::emitTailCall(FunctionSpaceIndex functionIndex, const TypeDefinition
         RELEASE_ASSERT(JSWebAssemblyInstance::offsetOfImportFunctionStub(functionIndex) < std::numeric_limits<int32_t>::max());
         m_jit.farJump(Address(GPRInfo::wasmContextInstancePointer, JSWebAssemblyInstance::offsetOfImportFunctionStub(functionIndex)), WasmEntryPtrTag);
     } else {
+        // Record the callee so the callee knows to look for it in updateCallsitesToCallUs.
+        m_directCallees.testAndSet(m_info.toCodeIndex(functionIndex));
         // Emit the call.
         Vector<UnlinkedWasmToWasmCall>* unlinkedWasmToWasmCalls = &m_unlinkedWasmToWasmCalls;
         auto calleeMove = m_jit.storeWasmCalleeCalleePatchable(isX86() ? sizeof(Register) : 0);
@@ -4219,6 +4190,8 @@ void BBQJIT::emitTailCall(FunctionSpaceIndex functionIndex, const TypeDefinition
 
 PartialResult WARN_UNUSED_RETURN BBQJIT::addCall(FunctionSpaceIndex functionIndex, const TypeDefinition& signature, ArgumentList& arguments, ResultList& results, CallType callType)
 {
+    JIT_COMMENT(m_jit, "calling functionIndexSpace: ", functionIndex, ConditionalDump(!m_info.isImportedFunctionFromFunctionIndexSpace(functionIndex), " functionIndex: ", functionIndex - m_info.importFunctionCount()));
+
     if (callType == CallType::TailCall) {
         emitTailCall(functionIndex, signature, arguments);
         return { };
@@ -4238,6 +4211,9 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addCall(FunctionSpaceIndex functionInde
         RELEASE_ASSERT(JSWebAssemblyInstance::offsetOfImportFunctionStub(functionIndex) < std::numeric_limits<int32_t>::max());
         m_jit.call(Address(GPRInfo::wasmContextInstancePointer, JSWebAssemblyInstance::offsetOfImportFunctionStub(functionIndex)), WasmEntryPtrTag);
     } else {
+        // Record the callee so the callee knows to look for it in updateCallsitesToCallUs.
+        ASSERT(m_info.toCodeIndex(functionIndex) < m_info.internalFunctionCount());
+        m_directCallees.testAndSet(m_info.toCodeIndex(functionIndex));
         // Emit the call.
         Vector<UnlinkedWasmToWasmCall>* unlinkedWasmToWasmCalls = &m_unlinkedWasmToWasmCalls;
         auto calleeMove = m_jit.storeWasmCalleeCalleePatchable();
@@ -4354,11 +4330,15 @@ void BBQJIT::emitIndirectTailCall(const char* opcode, const Value& callee, GPRRe
 
     resolvedArguments.append(Value::pinned(pointerType(), Location::fromStack(sizeof(Register))));
     parameterLocations.append(Location::fromStack(tailCallStackOffsetFromFP + Checked<int>(sizeof(Register))));
-#elif CPU(ARM64)
-    ScratchScope<1, 0> scratches(*this, RegisterSetBuilder::argumentGPRs(), calleeCode, callingConvention.prologueScratchGPRs[0]);
-    m_jit.loadPairPtr(MacroAssembler::framePointerRegister, scratches.gpr(0), MacroAssembler::linkRegister);
+#elif CPU(ARM64) || CPU(ARM_THUMB2)
+    auto preserved = callingConvention.argumentGPRs();
+    preserved.add(calleeCode, IgnoreVectors);
+    if constexpr (isARM64E())
+        preserved.add(callingConvention.prologueScratchGPRs[0], IgnoreVectors);
+    ScratchScope<1, 0> scratches(*this, WTFMove(preserved));
+    GPRReg callerFramePointer = scratches.gpr(0);
+    m_jit.loadPairPtr(MacroAssembler::framePointerRegister, callerFramePointer, MacroAssembler::linkRegister);
 #else
-    // FIXME: Add support for armv7
     UNREACHABLE_FOR_PLATFORM();
 #endif
 
@@ -4372,14 +4352,15 @@ void BBQJIT::emitIndirectTailCall(const char* opcode, const Value& callee, GPRRe
         consume(arguments[i]);
     }
 
-    for (const auto& param : callInfo.params) {
+    for (size_t i = 0; i < callInfo.params.size(); ++i) {
+        auto param = callInfo.params[i];
         switch (param.location.kind()) {
         case ValueLocation::Kind::GPRRegister:
-            parameterLocations.append(Location::fromGPR(param.location.jsr().payloadGPR()));
+        case ValueLocation::Kind::FPRRegister: {
+            auto type = signature.as<FunctionSignature>()->argumentType(i);
+            parameterLocations.append(Location::fromArgumentLocation(param, type.kind));
             break;
-        case ValueLocation::Kind::FPRRegister:
-            parameterLocations.append(Location::fromFPR(param.location.fpr()));
-            break;
+        }
         case ValueLocation::Kind::StackArgument:
             RELEASE_ASSERT_NOT_REACHED();
             break;
@@ -4405,11 +4386,10 @@ void BBQJIT::emitIndirectTailCall(const char* opcode, const Value& callee, GPRRe
     m_jit.loadPtr(Address(MacroAssembler::framePointerRegister, tailCallStackOffsetFromFP), wasmScratchGPR);
     m_jit.addPtr(TrustedImm32(tailCallStackOffsetFromFP + Checked<int>(sizeof(Register))), MacroAssembler::framePointerRegister, MacroAssembler::stackPointerRegister);
     m_jit.move(wasmScratchGPR, MacroAssembler::framePointerRegister);
-#elif CPU(ARM64)
-    m_jit.add64(TrustedImm32(tailCallStackOffsetFromFP + Checked<int>(sizeof(CallerFrameAndPC))), MacroAssembler::framePointerRegister, MacroAssembler::stackPointerRegister);
-    m_jit.move(scratches.gpr(0), MacroAssembler::framePointerRegister);
+#elif CPU(ARM64) || CPU(ARM_THUMB2)
+    m_jit.addPtr(TrustedImm32(tailCallStackOffsetFromFP + Checked<int>(sizeof(CallerFrameAndPC))), MacroAssembler::framePointerRegister, MacroAssembler::stackPointerRegister);
+    m_jit.move(callerFramePointer, MacroAssembler::framePointerRegister);
 #else
-    // FIXME: Add support for armv7
     UNREACHABLE_FOR_PLATFORM();
 #endif
 
@@ -4644,6 +4624,11 @@ void BBQJIT::finalize()
 Vector<UnlinkedHandlerInfo>&& BBQJIT::takeExceptionHandlers()
 {
     return WTFMove(m_exceptionHandlers);
+}
+
+FixedBitVector&& BBQJIT::takeDirectCallees()
+{
+    return WTFMove(m_directCallees);
 }
 
 Vector<CCallHelpers::Label>&& BBQJIT::takeCatchEntrypoints()
@@ -5100,6 +5085,7 @@ Expected<std::unique_ptr<InternalFunction>, String> parseAndCompileBBQ(Compilati
     callee.setStackCheckSize(checkSize);
 
     result->exceptionHandlers = irGenerator.takeExceptionHandlers();
+    result->outgoingJITDirectCallees = irGenerator.takeDirectCallees();
     compilationContext.catchEntrypoints = irGenerator.takeCatchEntrypoints();
     compilationContext.pcToCodeOriginMapBuilder = irGenerator.takePCToCodeOriginMapBuilder();
     compilationContext.bbqDisassembler = irGenerator.takeDisassembler();

@@ -1857,7 +1857,7 @@ editing/input/scroll-viewport-page-up-down.html [ Pass Failure ]
 [ Ventura ] imported/w3c/web-platform-tests/pointerevents/pointerevent_lostpointercapture_remove_setcapture_node.html [ Pass Failure ]
 
 # webkit.org/b/280378 [ Sequoia arm64 ] 14x http/tests/media/fairplay/* are constant failures
-[ Sequoia arm64 Release ] http/tests/media/fairplay/legacy-fairplay-hls.html [ Failure ] 
+[ Sequoia arm64 ] http/tests/media/fairplay/legacy-fairplay-hls.html [ Failure ] 
 
 # webkit.org/b/280413 [ macOS wk2 arm64 ] fast/forms/password-scrolled-after-caps-lock-toggled.html is a flaky failure 
 [ arm64 ] fast/forms/password-scrolled-after-caps-lock-toggled.html  [ Pass Failure ]
@@ -1893,3 +1893,12 @@ tiled-drawing/tile-size-slow-zoomed.html [ Pass Failure ]
 
 # webkit.org/b/280989 [ Sequoia wk2 x86_64 ] webanimations/frame-rate/document-timeline-maximum-frame-rate.html is a constant failure 
 [ Sequoia x86_64 ] webanimations/frame-rate/document-timeline-maximum-frame-rate.html [ Failure ]
+
+# webkit.org/b/281090 REGRESSION(284131@main?):[ macOS wk2 x86_64  ] http/tests/site-isolation/selection-focus.html is a constant ImageOnlyFailure 
+[ x86_64 ] http/tests/site-isolation/selection-focus.html [ ImageOnlyFailure ]
+
+# webkit.org/b/281089 REGRESSION(284750@main): [macOS iOS Debug] ASSERTION FAILED: !child->frameID() in http/tests/site-isolation/draw-after-cross-origin-navigation-between-two-remote-frames.html
+[ Debug ] http/tests/site-isolation/draw-after-cross-origin-navigation-between-two-remote-frames.html [ Pass Timeout ImageOnlyFailure ]
+
+# webkit.org/b/281241 REGRESSION(284932@main): [macOS arm64] http/tests/site-isolation/selection-focus.html is a constant failure and false positive in EWS
+[ arm64 ] http/tests/site-isolation/selection-focus.html [ Failure ]

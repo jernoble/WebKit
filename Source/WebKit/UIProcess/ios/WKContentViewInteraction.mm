@@ -131,7 +131,6 @@
 #import <WebCore/PathUtilities.h>
 #import <WebCore/PlatformTextAlternatives.h>
 #import <WebCore/PromisedAttachmentInfo.h>
-#import <WebCore/RuntimeApplicationChecks.h>
 #import <WebCore/ScrollTypes.h>
 #import <WebCore/Scrollbar.h>
 #import <WebCore/ShareData.h>
@@ -162,6 +161,7 @@
 #import <wtf/BlockObjCExceptions.h>
 #import <wtf/BlockPtr.h>
 #import <wtf/CallbackAggregator.h>
+#import <wtf/RuntimeApplicationChecks.h>
 #import <wtf/Scope.h>
 #import <wtf/SetForScope.h>
 #import <wtf/StdLibExtras.h>
@@ -9721,7 +9721,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
     if (!_focusedElementInformation.shouldUseLegacySelectPopoverDismissalBehaviorInDataActivation)
         return NO;
 
-    return WebCore::IOSApplication::isDataActivation();
+    return WTF::IOSApplication::isDataActivation();
 }
 
 #if ENABLE(IMAGE_ANALYSIS)
@@ -11066,6 +11066,23 @@ static RetainPtr<UITargetedPreview> createTargetedPreview(UIImage *image, UIView
     return adoptNS([[UITargetedPreview alloc] initWithView:imageView.get() parameters:parameters.get() target:target.get()]);
 }
 
+- (UITargetedPreview *)_createTargetedPreviewFromTextIndicator:(WebCore::TextIndicatorData)textIndicatorData previewContainer:(UIView *)previewContainer
+{
+    RetainPtr textIndicatorImage = uiImageForImage(textIndicatorData.contentImage.get());
+
+    RetainPtr preview = createTargetedPreview(textIndicatorImage.get(), self, previewContainer, textIndicatorData.textBoundingRectInRootViewCoordinates, textIndicatorData.textRectsInBoundingRectCoordinates, ^{
+        if (textIndicatorData.estimatedBackgroundColor != WebCore::Color::transparentBlack)
+            return cocoaColor(textIndicatorData.estimatedBackgroundColor).autorelease();
+
+        // In the case where background color estimation fails, it doesn't make sense to
+        // show a text indicator preview with a clear background in light mode. Default
+        // to the system background color instead.
+        return UIColor.systemBackgroundColor;
+    }());
+
+    return preview.autorelease();
+}
+
 static RetainPtr<UITargetedPreview> createFallbackTargetedPreview(UIView *rootView, UIView *containerView, const WebCore::FloatRect& frameInRootViewCoordinates, UIColor *backgroundColor)
 {
     if (!containerView.window)
@@ -11168,15 +11185,8 @@ static RetainPtr<UITargetedPreview> createFallbackTargetedPreview(UIView *rootVi
     if (_positionInformation.isLink && _positionInformation.linkIndicator.contentImage) {
         auto indicator = _positionInformation.linkIndicator;
         _positionInformationLinkIndicator = indicator;
-        auto textIndicatorImage = uiImageForImage(indicator.contentImage.get());
-        targetedPreview = createTargetedPreview(textIndicatorImage.get(), self, self.containerForContextMenuHintPreviews, indicator.textBoundingRectInRootViewCoordinates, indicator.textRectsInBoundingRectCoordinates, ^{
-            if (indicator.estimatedBackgroundColor != WebCore::Color::transparentBlack)
-                return cocoaColor(indicator.estimatedBackgroundColor).autorelease();
-            // In the case where background color estimation fails, it doesn't make sense to
-            // show a text indicator preview with a clear background in light mode. Default
-            // to the system background color instead.
-            return UIColor.systemBackgroundColor;
-        }());
+
+        targetedPreview = [self _createTargetedPreviewFromTextIndicator:indicator previewContainer:self.containerForContextMenuHintPreviews];
     } else if ((_positionInformation.isAttachment || _positionInformation.isImage) && _positionInformation.image) {
         auto cgImage = _positionInformation.image->makeCGImageCopy();
         auto image = adoptNS([[UIImage alloc] initWithCGImage:cgImage.get()]);
@@ -11559,28 +11569,28 @@ static BOOL applicationIsKnownToIgnoreMouseEvents(const char* &warningVersion)
     // check them before the linked-on-or-after.
 
     // <rdar://problem/59521967> iAd Video does not respond to mouse events, only touch events
-    if (WebCore::IOSApplication::isNews() || WebCore::IOSApplication::isStocks()) {
+    if (WTF::IOSApplication::isNews() || WTF::IOSApplication::isStocks()) {
         warningVersion = nullptr;
         return YES;
     }
 
     if (!linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::SupportsiOSAppsOnMacOS)) {
-        if (WebCore::IOSApplication::isFIFACompanion() // <rdar://problem/67093487>
-            || WebCore::IOSApplication::isNoggin() // <rdar://problem/64830335>
-            || WebCore::IOSApplication::isOKCupid() // <rdar://problem/65698496>
-            || WebCore::IOSApplication::isJWLibrary() // <rdar://problem/68104852>
-            || WebCore::IOSApplication::isPaperIO() // <rdar://problem/68738585>
-            || WebCore::IOSApplication::isCrunchyroll()) { // <rdar://problem/66362029>
+        if (WTF::IOSApplication::isFIFACompanion() // <rdar://problem/67093487>
+            || WTF::IOSApplication::isNoggin() // <rdar://problem/64830335>
+            || WTF::IOSApplication::isOKCupid() // <rdar://problem/65698496>
+            || WTF::IOSApplication::isJWLibrary() // <rdar://problem/68104852>
+            || WTF::IOSApplication::isPaperIO() // <rdar://problem/68738585>
+            || WTF::IOSApplication::isCrunchyroll()) { // <rdar://problem/66362029>
             warningVersion = "14.2";
             return YES;
         }
     }
 
     if (!linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::SendsNativeMouseEvents)) {
-        if (WebCore::IOSApplication::isPocketCity() // <rdar://problem/62273077>
-            || WebCore::IOSApplication::isEssentialSkeleton() // <rdar://problem/62694519>
-            || WebCore::IOSApplication::isESPNFantasySports() // <rdar://problem/64671543>
-            || WebCore::IOSApplication::isDoubleDown()) { // <rdar://problem/64668138>
+        if (WTF::IOSApplication::isPocketCity() // <rdar://problem/62273077>
+            || WTF::IOSApplication::isEssentialSkeleton() // <rdar://problem/62694519>
+            || WTF::IOSApplication::isESPNFantasySports() // <rdar://problem/64671543>
+            || WTF::IOSApplication::isDoubleDown()) { // <rdar://problem/64668138>
             warningVersion = "13.4";
             return YES;
         }
@@ -13373,30 +13383,15 @@ inline static NSString *extendSelectionCommand(UITextLayoutDirection direction)
 #if ENABLE(WRITING_TOOLS)
 - (void)targetedPreviewForID:(NSUUID *)uuid completionHandler:(void (^)(UITargetedPreview *))completionHandler
 {
-    auto textUUID = WTF::UUID::fromNSUUID(uuid);
-    _page->getTextIndicatorForID(*textUUID, [protectedSelf = retainPtr(self), completionHandler = makeBlockPtr(completionHandler)] (std::optional<WebCore::TextIndicatorData> indicatorData) {
+    auto animationID = WTF::UUID::fromNSUUID(uuid);
 
+    _page->getTextIndicatorForID(*animationID, [protectedSelf = retainPtr(self), completionHandler = makeBlockPtr(completionHandler)] (auto&& indicatorData) {
         if (!indicatorData) {
             completionHandler(nil);
             return;
         }
 
-        auto snapshot = indicatorData->contentImage;
-        if (!snapshot) {
-            completionHandler(nil);
-            return;
-        }
-
-        auto snapshotImage = snapshot->nativeImage();
-        if (!snapshotImage) {
-            completionHandler(nil);
-            return;
-        }
-
-        RetainPtr image = adoptNS([[UIImage alloc] initWithCGImage:snapshotImage->platformImage().get() scale:protectedSelf->_page->deviceScaleFactor() orientation:UIImageOrientationUp]);
-
-        RetainPtr targetedPreview = createTargetedPreview(image.get(), protectedSelf.get(), [protectedSelf containerForContextMenuHintPreviews], indicatorData->textBoundingRectInRootViewCoordinates, indicatorData->textRectsInBoundingRectCoordinates, nil);
-
+        RetainPtr targetedPreview = [protectedSelf _createTargetedPreviewFromTextIndicator:*indicatorData previewContainer:[protectedSelf containerForContextMenuHintPreviews]];
         completionHandler(targetedPreview.get());
     });
 }
@@ -13436,33 +13431,17 @@ inline static NSString *extendSelectionCommand(UITextLayoutDirection direction)
     // Store this completion handler so that it can be called after the execution of the next
     // call to replace the text and eventually use this completion handler to pass the
     // text indicator to UIKit.
-    _page->storeDestinationCompletionHandlerForAnimationID(*animationUUID, [protectedSelf = retainPtr(self),  completionHandler = makeBlockPtr(completionHandler)] (std::optional<WebCore::TextIndicatorData> textIndicatorData) {
-        if (!textIndicatorData) {
+    _page->storeDestinationCompletionHandlerForAnimationID(*animationUUID, [protectedSelf = retainPtr(self), completionHandler = makeBlockPtr(completionHandler)] (auto&& indicatorData) {
+        if (!indicatorData) {
             completionHandler(nil);
             return;
         }
 
-        auto snapshot = textIndicatorData->contentImage;
-        if (!snapshot) {
-            completionHandler(nil);
-            return;
-        }
-
-        auto snapshotImage = snapshot->nativeImage();
-        if (!snapshotImage) {
-            completionHandler(nil);
-            return;
-        }
-
-        RetainPtr image = adoptNS([[UIImage alloc] initWithCGImage:snapshotImage->platformImage().get() scale:protectedSelf->_page->deviceScaleFactor() orientation:UIImageOrientationUp]);
-
-        RetainPtr targetedPreview = createTargetedPreview(image.get(), protectedSelf.get(), [protectedSelf containerForContextMenuHintPreviews], textIndicatorData->textBoundingRectInRootViewCoordinates, textIndicatorData->textRectsInBoundingRectCoordinates, nil);
-
+        RetainPtr targetedPreview = [protectedSelf _createTargetedPreviewFromTextIndicator:*indicatorData previewContainer:[protectedSelf containerForContextMenuHintPreviews]];
         completionHandler(targetedPreview.get());
     });
 
     _page->callCompletionHandlerForAnimationID(*animationUUID, WebCore::TextAnimationRunMode::RunAnimation);
-
 }
 
 - (void)replacementEffectDidComplete

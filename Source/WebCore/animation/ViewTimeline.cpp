@@ -217,7 +217,7 @@ RenderBox* ViewTimeline::sourceRenderer() const
     return subjectRenderer->enclosingScrollableContainer();
 }
 
-ViewTimeline::Data ViewTimeline::computeViewTimelineData(const TimelineRange& range) const
+ScrollTimeline::Data ViewTimeline::computeTimelineData(const TimelineRange& range) const
 {
     if (!m_subject)
         return { };
@@ -291,18 +291,18 @@ ViewTimeline::Data ViewTimeline::computeViewTimelineData(const TimelineRange& ra
     auto rangeStart = computeRangeStart() + insetEnd.value();
     auto rangeEnd = computeRangeEnd() - insetStart.value();
 
-    return { currentScrollOffset, rangeStart + floatValueForLength(range.start.offset, rangeEnd - rangeStart), rangeEnd - floatValueForLength(range.end.offset, rangeEnd - rangeStart) };
+    return { currentScrollOffset, rangeStart + ScrollTimeline::floatValueForOffset(range.start.offset, rangeEnd - rangeStart), rangeEnd - ScrollTimeline::floatValueForOffset(range.end.offset, rangeEnd - rangeStart) };
 }
 
 const CSSNumericValue& ViewTimeline::startOffset() const
 {
-    auto data = computeViewTimelineData();
+    auto data = computeTimelineData();
     return CSSNumericFactory::px(data.rangeStart);
 }
 
 const CSSNumericValue& ViewTimeline::endOffset() const
 {
-    auto data = computeViewTimelineData();
+    auto data = computeTimelineData();
     return CSSNumericFactory::px(data.rangeEnd);
 }
 

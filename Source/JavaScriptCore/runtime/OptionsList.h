@@ -38,11 +38,7 @@ using WTF::PrintStream;
 
 namespace JSC {
 
-#if PLATFORM(IOS_FAMILY)
-#define MAXIMUM_NUMBER_OF_FTL_COMPILER_THREADS 2
-#else
 #define MAXIMUM_NUMBER_OF_FTL_COMPILER_THREADS 8
-#endif
 
 JS_EXPORT_PRIVATE bool canUseJITCage();
 bool canUseHandlerIC();
@@ -435,6 +431,7 @@ bool hasCapacityToUseLargeGigacage();
     v(Bool, fireExecutableAllocationFuzzRandomly, false, Normal, nullptr) \
     v(Double, fireExecutableAllocationFuzzRandomlyProbability, 0.1, Normal, nullptr) \
     v(Bool, verboseExecutableAllocationFuzz, false, Normal, nullptr) \
+    v(Bool, zeroExecutableMemoryOnFree, false, Normal, "0 out instructions when freeing JIT memory."_s) \
     \
     v(Bool, useOSRExitFuzz, false, Normal, nullptr) \
     v(Unsigned, fireOSRExitFuzzAtStatic, 0, Normal, nullptr) \
@@ -536,6 +533,7 @@ bool hasCapacityToUseLargeGigacage();
     v(Bool, useTracePoints, false, Normal, nullptr) \
     v(Bool, useCompilerSignpost, false, Normal, nullptr) \
     v(Bool, traceLLIntExecution, false, Configurable, nullptr) \
+    v(Bool, traceWasmLLIntExecution, false, Configurable, nullptr) \
     v(Bool, traceLLIntSlowPath, false, Configurable, nullptr) \
     v(Bool, traceBaselineJITExecution, false, Normal, nullptr) \
     v(Unsigned, thresholdForGlobalLexicalBindingEpoch, UINT_MAX, Normal, "Threshold for global lexical binding epoch. If the epoch reaches to this value, CodeBlock metadata for scope operations will be revised globally. It needs to be greater than 1."_s) \
@@ -580,9 +578,12 @@ bool hasCapacityToUseLargeGigacage();
     v(Bool, useWasmIPIntEpilogueOSR, true, Normal, "Allow IPInt to tier up during function epilogues"_s) \
     v(Bool, forceAllFunctionsToUseSIMD, false, Normal, "Force all functions to act conservatively w.r.t fp/vector registers for testing."_s) \
     v(Bool, useOMGInlining, true, Normal, "Use OMG inlining"_s) \
+    v(Bool, freeRetiredWasmCode, true, Normal, "free BBQ/OMG-OSR wasm code once it's no longer reachable."_s) \
     \
     /* Feature Flags */\
     \
+    v(Bool, useAtomicsPause, true, Normal, "Expose Atomics.pause."_s) \
+    v(Bool, useErrorIsError, false, Normal, "Expose Error.isError feature."_s) \
     v(Bool, useFloat16Array, true, Normal, "Expose Float16Array."_s) \
     v(Bool, useIteratorHelpers, false, Normal, "Expose the Iterator Helpers."_s) \
     v(Bool, useMathSumPreciseMethod, false, Normal, "Expose the Math.sumPrecise() method."_s) \
@@ -596,7 +597,7 @@ bool hasCapacityToUseLargeGigacage();
     v(Bool, useWasmGC, true, Normal, "Allow gc types from the wasm gc proposal."_s) \
     v(Bool, useWasmSIMD, true, Normal, "Allow the new simd instructions and types from the wasm simd spec."_s) \
     v(Bool, useWasmRelaxedSIMD, false, Normal, "Allow the relaxed simd instructions and types from the wasm relaxed simd spec."_s) \
-    v(Bool, useWasmTailCalls, !isARM_THUMB2(), Normal, "Allow the new instructions from the wasm tail calls spec."_s) \
+    v(Bool, useWasmTailCalls, true, Normal, "Allow the new instructions from the wasm tail calls spec."_s) \
 
 
 

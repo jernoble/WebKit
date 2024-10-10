@@ -1656,6 +1656,7 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     page/UserContentProvider.h
     page/UserContentTypes.h
     page/UserContentURLPattern.h
+    page/UserGestureTokenIdentifier.h
     page/UserInterfaceDirectionPolicy.h
     page/UserMediaRequestIdentifier.h
     page/UserMessageHandler.h
@@ -1823,7 +1824,6 @@ set(WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/ReferrerPolicy.h
     platform/RegistrableDomain.h
     platform/RemoteCommandListener.h
-    platform/RuntimeApplicationChecks.h
     platform/ScreenOrientationManager.h
     platform/ScreenProperties.h
     platform/ScriptExecutionContextIdentifier.h

@@ -563,7 +563,7 @@ std::unique_ptr<DataListSuggestionPicker> EmptyChromeClient::createDataListSugge
 
 #if ENABLE(DATE_AND_TIME_INPUT_TYPES)
 
-std::unique_ptr<DateTimeChooser> EmptyChromeClient::createDateTimeChooser(DateTimeChooserClient&)
+RefPtr<DateTimeChooser> EmptyChromeClient::createDateTimeChooser(DateTimeChooserClient&)
 {
     return nullptr;
 }
@@ -839,7 +839,7 @@ void EmptyFrameLoaderClient::setMainFrameDocumentReady(bool)
 {
 }
 
-void EmptyFrameLoaderClient::startDownload(const ResourceRequest&, const String&)
+void EmptyFrameLoaderClient::startDownload(const ResourceRequest&, const String&, FromDownloadAttribute)
 {
 }
 

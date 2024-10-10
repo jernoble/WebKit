@@ -907,9 +907,9 @@ static BindGroupEntryUsage usageForBuffer(WGPUBufferBindingType bufferBindingTyp
     return BindGroupEntryUsage::Undefined;
 }
 
-static BindGroupEntryUsageData makeBindGroupEntryUsageData(BindGroupEntryUsage usage, uint32_t bindingIndex, auto& resource, uint64_t entryOffset = 0)
+static BindGroupEntryUsageData makeBindGroupEntryUsageData(BindGroupEntryUsage usage, uint32_t bindingIndex, auto& resource, uint64_t entryOffset = 0, uint64_t entrySize = 0)
 {
-    return BindGroupEntryUsageData { .usage = usage, .binding = bindingIndex, .resource = &resource, .entryOffset = entryOffset };
+    return BindGroupEntryUsageData { .usage = usage, .binding = bindingIndex, .resource = &resource, .entryOffset = entryOffset, .entrySize = entrySize };
 }
 
 constexpr ShaderStage stages[] = { ShaderStage::Vertex, ShaderStage::Fragment, ShaderStage::Compute };
@@ -933,10 +933,12 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
     BindGroup::ShaderStageArray<id<MTLArgumentEncoder>> argumentEncoder = std::array<id<MTLArgumentEncoder>, stageCount>({ bindGroupLayout.vertexArgumentEncoder(), bindGroupLayout.fragmentArgumentEncoder(), bindGroupLayout.computeArgumentEncoder() });
     BindGroup::ShaderStageArray<ExternalTextureIndices> externalTextureIndices = std::array<ExternalTextureIndices, stageCount>({ ExternalTextureIndices(), ExternalTextureIndices(), ExternalTextureIndices() });
     BindGroup::ShaderStageArray<id<MTLBuffer>> argumentBuffer;
+    BindGroup::ShaderStageArray<BindGroupLayout::ArgumentIndices> argumentIndices;
     for (ShaderStage stage : stages) {
         auto encodedLength = bindGroupLayout.encodedLength(stage);
         argumentBuffer[stage] = encodedLength ? safeCreateBuffer(encodedLength, MTLStorageModeShared) : nil;
         [argumentEncoder[stage] setArgumentBuffer:argumentBuffer[stage] offset:0];
+        argumentIndices[stage] = bindGroupLayout.argumentIndices(stage);
     }
 
     constexpr auto maxResourceUsageValue = MTLResourceUsageRead | MTLResourceUsageWrite;
@@ -1047,13 +1049,16 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
                 }
 
                 if (stage != ShaderStage::Undefined && buffer.length) {
+                    argumentIndices[stage].remove(index);
                     [argumentEncoder[stage] setBuffer:buffer offset:entryOffset atIndex:index];
-                    if (bufferSizeArgumentBufferIndex)
+                    if (bufferSizeArgumentBufferIndex) {
+                        argumentIndices[stage].remove(*bufferSizeArgumentBufferIndex);
                         *(uint32_t*)[argumentEncoder[stage] constantDataAtIndex:*bufferSizeArgumentBufferIndex] = std::min<uint32_t>(entrySize, buffer.length);
+                    }
                 }
                 if (buffer) {
                     stageResources[metalRenderStage(stage)][resourceUsage - 1].append(buffer);
-                    stageResourceUsages[metalRenderStage(stage)][resourceUsage - 1].append(makeBindGroupEntryUsageData(usageForBuffer(layoutBinding->type), entry.binding, apiBuffer, entryOffset));
+                    stageResourceUsages[metalRenderStage(stage)][resourceUsage - 1].append(makeBindGroupEntryUsageData(usageForBuffer(layoutBinding->type), entry.binding, apiBuffer, entryOffset, entrySize));
                 }
             } else if (samplerIsPresent) {
                 auto* layoutBinding = hasBinding<WGPUSamplerBindingLayout>(bindGroupLayoutEntries, bindingIndex);
@@ -1074,6 +1079,7 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
 
                 id<MTLSamplerState> sampler = apiSampler.samplerState();
                 if (stage != ShaderStage::Undefined) {
+                    argumentIndices[stage].remove(index);
                     [argumentEncoder[stage] setSamplerState:sampler atIndex:index];
                     samplersSet.add(&apiSampler, BindGroup::ShaderStageArray<std::optional<uint32_t>> { }).iterator->value[stage] = index;
                 }
@@ -1132,8 +1138,10 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
                     }
                 }
 
-                if (stage != ShaderStage::Undefined)
+                if (stage != ShaderStage::Undefined) {
+                    argumentIndices[stage].remove(index);
                     [argumentEncoder[stage] setTexture:texture atIndex:index];
+                }
                 if (texture) {
                     stageResources[metalRenderStage(stage)][resourceUsage - 1].append(texture);
                     ASSERT(apiTextureView.isDestroyed() || texture.parentRelativeLevel == apiTextureView.baseMipLevel());
@@ -1164,12 +1172,17 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
                 }
 
                 if (stage != ShaderStage::Undefined) {
+                    argumentIndices[stage].remove(index);
                     [argumentEncoder[stage] setTexture:texture0 atIndex:index++];
+
+                    argumentIndices[stage].remove(index);
                     [argumentEncoder[stage] setTexture:texture1 atIndex:index++];
 
+                    argumentIndices[stage].remove(index);
                     auto* uvRemapAddress = static_cast<simd::float3x2*>([argumentEncoder[stage] constantDataAtIndex:index++]);
                     *uvRemapAddress = textureData.uvRemappingMatrix;
 
+                    argumentIndices[stage].remove(index);
                     auto* cscMatrixAddress = static_cast<simd::float4x3*>([argumentEncoder[stage] constantDataAtIndex:index++]);
                     *cscMatrixAddress = textureData.colorSpaceConversionMatrix;
                 }
@@ -1180,6 +1193,11 @@ Ref<BindGroup> Device::createBindGroup(const WGPUBindGroupDescriptor& descriptor
             VALIDATION_ERROR([NSString stringWithFormat:@"Binding %d was not contained in the bind group", entry.binding]);
             return BindGroup::createInvalid(*this);
         }
+    }
+
+    for (auto& indices : argumentIndices) {
+        if (indices.size())
+            return BindGroup::createInvalid(*this);
     }
 
     Vector<BindableResources> resources;

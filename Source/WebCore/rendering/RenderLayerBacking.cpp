@@ -94,7 +94,7 @@
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-#include "RuntimeApplicationChecks.h"
+#include <wtf/RuntimeApplicationChecks.h>
 #endif
 
 #if PLATFORM(MAC)
@@ -583,7 +583,7 @@ bool RenderLayerBacking::shouldSetContentsDisplayDelegate() const
 #if PLATFORM(IOS_FAMILY)
 bool RenderLayerBacking::needsIOSDumpRenderTreeMainFrameRenderViewLayerIsAlwaysOpaqueHack(const GraphicsLayer& layer) const
 {
-    if (m_isMainFrameRenderViewLayer && IOSApplication::isDumpRenderTree()) {
+    if (m_isMainFrameRenderViewLayer && WTF::IOSApplication::isDumpRenderTree()) {
         // In iOS WebKit1 the main frame's RenderView layer is always transparent. We lie that it is opaque so that
         // internals.layerTreeAsText() tests succeed.
         ASSERT_UNUSED(layer, !layer.contentsOpaque());
@@ -1002,10 +1002,8 @@ void RenderLayerBacking::updateAfterWidgetResize()
     if (!renderWidget)
         return;
 
-    if (auto* innerCompositor = RenderLayerCompositor::frameContentsCompositor(*renderWidget)) {
-        innerCompositor->frameViewDidChangeSize();
-        innerCompositor->frameViewDidChangeLocation(flooredIntPoint(contentsBox().location()));
-    }
+    if (RefPtr widget = renderWidget->widget())
+        widget->compositedBoundsChanged(flooredIntPoint(contentsBox().location()));
 
     if (auto* contentsLayer = layerForContents())
         contentsLayer->setPosition(flooredIntPoint(contentsBox().location()));
@@ -1487,9 +1485,9 @@ void RenderLayerBacking::updateGeometry(const RenderLayer* compositedAncestor)
     m_graphicsLayer->setPosition(primaryLayerPosition);
     m_graphicsLayer->setSize(primaryGraphicsLayerRect.size());
 
-#if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
+#if ENABLE(CSS_TRANSFORM_STYLE_SEPARATED)
     // FIXME: Take ancestry into account and remove unnecessary structural layers.
-    m_graphicsLayer->setIsSeparated(style.usedTransformStyle3D() == TransformStyle3D::Optimized3D);
+    m_graphicsLayer->setIsSeparated(style.usedTransformStyle3D() == TransformStyle3D::Separated);
 #endif
 
     // Compute renderer offset from primary graphics layer. Note that primaryGraphicsLayerRect is in parentGraphicsLayer's coordinate system which is not necessarily

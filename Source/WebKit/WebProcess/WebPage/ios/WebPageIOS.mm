@@ -148,7 +148,6 @@
 #import <WebCore/RenderVideo.h>
 #import <WebCore/RenderView.h>
 #import <WebCore/RenderedDocumentMarker.h>
-#import <WebCore/RuntimeApplicationChecks.h>
 #import <WebCore/Settings.h>
 #import <WebCore/ShadowRoot.h>
 #import <WebCore/SharedBuffer.h>
@@ -165,6 +164,7 @@
 #import <wtf/IterationStatus.h>
 #import <wtf/MathExtras.h>
 #import <wtf/MemoryPressureHandler.h>
+#import <wtf/RuntimeApplicationChecks.h>
 #import <wtf/Scope.h>
 #import <wtf/SetForScope.h>
 #import <wtf/cocoa/Entitlements.h>
@@ -4164,6 +4164,12 @@ void WebPage::resetViewportDefaultConfiguration(WebFrame* frame, bool hasMobileD
         if (m_isInFullscreenMode == IsInFullscreenMode::Yes)
             return m_viewportConfiguration.nativeWebpageParameters();
 #endif
+
+#if ENABLE(PDF_PLUGIN)
+        if (mainFramePlugIn())
+            return m_viewportConfiguration.pluginDocumentParameters();
+#endif
+
         if (shouldIgnoreMetaViewport())
             return m_viewportConfiguration.nativeWebpageParameters();
         return ViewportConfiguration::webpageParameters();
@@ -4616,6 +4622,13 @@ void WebPage::updateVisibleContentRects(const VisibleContentRectUpdateInfo& visi
         return transactionIdBeforeScalingPage >= visibleContentRectUpdateInfo.lastLayerTreeTransactionID();
     })();
 
+    bool pluginHandlesScaleFactor = [&]() -> bool {
+#if ENABLE(PDF_PLUGIN)
+        return mainFramePlugIn();
+#endif
+        return false;
+    }();
+
     if (!pageHasBeenScaledSinceLastLayerTreeCommitThatChangedPageScale) {
         bool hasSetPageScale = false;
         if (scaleFromUIProcess) {
@@ -4624,11 +4637,7 @@ void WebPage::updateVisibleContentRects(const VisibleContentRectUpdateInfo& visi
 
             m_dynamicSizeUpdateHistory.clear();
 
-#if ENABLE(PDF_PLUGIN)
-            if (RefPtr pluginView = mainFramePlugIn())
-                pluginView->setPageScaleFactor(scaleFromUIProcess.value(), scrollPosition);
-            else
-#endif
+            if (!pluginHandlesScaleFactor)
                 m_page->setPageScaleFactor(scaleFromUIProcess.value(), scrollPosition, m_isInStableState);
 
             hasSetPageScale = true;
@@ -5646,6 +5655,14 @@ void WebPage::computeSelectionClipRectAndEnclosingScroller(EditorState& state, c
         state.visualData->selectionClipRect = WTFMove(innerScrollingClipRect);
     }
 }
+
+#if ENABLE(PDF_PLUGIN)
+void WebPage::didInitializePlugin()
+{
+    resetViewportDefaultConfiguration(m_mainFrame.ptr());
+    viewportConfigurationChanged();
+}
+#endif
 
 } // namespace WebKit
 

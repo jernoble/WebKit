@@ -120,7 +120,7 @@ struct CoreIPCAuditToken;
 struct NetworkProcessConnectionParameters;
 struct WebTransportSessionIdentifierType;
 
-using WebTransportSessionIdentifier = LegacyNullableObjectIdentifier<WebTransportSessionIdentifierType>;
+using WebTransportSessionIdentifier = ObjectIdentifier<WebTransportSessionIdentifierType>;
 
 enum class PrivateRelayed : bool;
 
@@ -280,7 +280,7 @@ private:
     void pageLoadCompleted(WebCore::PageIdentifier);
     void browsingContextRemoved(WebPageProxyIdentifier, WebCore::PageIdentifier, WebCore::FrameIdentifier);
     void crossOriginRedirectReceived(WebCore::ResourceLoaderIdentifier, const URL& redirectURL);
-    void startDownload(DownloadID, const WebCore::ResourceRequest&, const std::optional<WebCore::SecurityOriginData>& topOrigin, std::optional<NavigatingToAppBoundDomain>, const String& suggestedName = { });
+    void startDownload(DownloadID, const WebCore::ResourceRequest&, const std::optional<WebCore::SecurityOriginData>& topOrigin, std::optional<NavigatingToAppBoundDomain>, const String& suggestedName = { }, WebCore::FromDownloadAttribute = WebCore::FromDownloadAttribute::No);
     void convertMainResourceLoadToDownload(std::optional<WebCore::ResourceLoaderIdentifier> mainResourceLoadIdentifier, DownloadID, const WebCore::ResourceRequest&, const std::optional<WebCore::SecurityOriginData>& topOrigin, const WebCore::ResourceResponse&, std::optional<NavigatingToAppBoundDomain>);
 
     void registerURLSchemesAsCORSEnabled(Vector<String>&& schemes);
@@ -484,7 +484,7 @@ private:
     WeakPtr<WebSWServerConnection> m_swConnection;
     std::unique_ptr<WebSWServerToContextConnection> m_swContextConnection;
     WeakPtr<WebSharedWorkerServerConnection> m_sharedWorkerConnection;
-    std::unique_ptr<WebSharedWorkerServerToContextConnection> m_sharedWorkerContextConnection;
+    RefPtr<WebSharedWorkerServerToContextConnection> m_sharedWorkerContextConnection;
 
 #if ENABLE(WEB_RTC)
     bool m_isRegisteredToRTCDataChannelProxy { false };

@@ -49,6 +49,21 @@ enum class LineRangeType : uint8_t {
     Right,
 };
 
+enum class WordRangeType : uint8_t {
+    Left,
+    Right,
+};
+
+enum class SentenceRangeType : uint8_t {
+    Current,
+    Left,
+    Right,
+};
+
+// Options for findMarker
+enum class CoalesceObjectBreaks : bool { No, Yes };
+enum class IgnoreBRs : bool { No, Yes };
+
 struct TextMarkerData {
     unsigned treeID;
     unsigned objectID;
@@ -129,6 +144,10 @@ public:
     AXTextMarker(AXID treeID, AXID objectID, unsigned offset)
         : m_data({ treeID, objectID, offset, Position::PositionIsOffsetInAnchor, Affinity::Downstream, 0, offset })
     { }
+    AXTextMarker(const AXCoreObject& object, unsigned offset)
+        : m_data({ object.treeID(), object.objectID(), offset, Position::PositionIsOffsetInAnchor, Affinity::Downstream, 0, offset })
+    { }
+
     AXTextMarker() = default;
 
     operator bool() const { return !isNull(); }
@@ -163,14 +182,24 @@ public:
     bool isInTextRun() const;
 
     // Find the next or previous marker, optionally stopping at the given ID and returning an invalid marker.
-    AXTextMarker findMarker(AXDirection, std::optional<AXID> = std::nullopt) const;
+    AXTextMarker findMarker(AXDirection, CoalesceObjectBreaks = CoalesceObjectBreaks::Yes, IgnoreBRs = IgnoreBRs::No, std::optional<AXID> = std::nullopt) const;
     // Starting from this text marker, creates a new position for the given direction and text unit type.
     AXTextMarker findMarker(AXDirection, AXTextUnit, AXTextUnitBoundary, std::optional<AXID> stopAtID = std::nullopt) const;
     AXTextMarker previousLineStart(std::optional<AXID> stopAtID = std::nullopt) const { return findMarker(AXDirection::Previous, AXTextUnit::Line, AXTextUnitBoundary::Start, stopAtID); }
     AXTextMarker nextLineEnd(std::optional<AXID> stopAtID = std::nullopt) const { return findMarker(AXDirection::Next, AXTextUnit::Line, AXTextUnitBoundary::End, stopAtID); }
+    AXTextMarker nextWordStart(std::optional<AXID> stopAtID = std::nullopt) const { return findMarker(AXDirection::Next, AXTextUnit::Word, AXTextUnitBoundary::Start, stopAtID); }
+    AXTextMarker nextWordEnd(std::optional<AXID> stopAtID = std::nullopt) const { return findMarker(AXDirection::Next, AXTextUnit::Word, AXTextUnitBoundary::End, stopAtID); }
+    AXTextMarker previousWordStart(std::optional<AXID> stopAtID = std::nullopt) const { return findMarker(AXDirection::Previous, AXTextUnit::Word, AXTextUnitBoundary::Start, stopAtID); }
+    AXTextMarker previousWordEnd(std::optional<AXID> stopAtID = std::nullopt) const { return findMarker(AXDirection::Previous, AXTextUnit::Word, AXTextUnitBoundary::End, stopAtID); }
+    AXTextMarker previousSentenceStart(std::optional<AXID> stopAtID = std::nullopt) const { return findMarker(AXDirection::Previous, AXTextUnit::Sentence, AXTextUnitBoundary::Start, stopAtID); }
+    AXTextMarker nextSentenceEnd(std::optional<AXID> stopAtID = std::nullopt) const { return findMarker(AXDirection::Next, AXTextUnit::Sentence, AXTextUnitBoundary::End, stopAtID); }
 
     // Creates a range for the line this marker points to.
     AXTextMarkerRange lineRange(LineRangeType) const;
+    // Creates a range for the word specified by the line range type.
+    AXTextMarkerRange wordRange(WordRangeType) const;
+    // Creates a range for the sentence specified by the sentence range type;
+    AXTextMarkerRange sentenceRange(SentenceRangeType) const;
     // Given a character offset relative to this marker, find the next marker the offset points to.
     AXTextMarker nextMarkerFromOffset(unsigned) const;
     // Returns the number of intermediate text markers between this and the root.
@@ -203,6 +232,8 @@ private:
     bool atLineBoundaryForDirection(AXDirection) const;
     bool atLineStart() const { return atLineBoundaryForDirection(AXDirection::Previous); }
     bool atLineEnd() const { return atLineBoundaryForDirection(AXDirection::Next); }
+    // True when two nodes are visually the same (i.e. on the boundary of an object)
+    bool equivalentTextPosition(const AXTextMarker&) const;
 #endif // ENABLE(AX_THREAD_TEXT_APIS)
 
     TextMarkerData m_data;

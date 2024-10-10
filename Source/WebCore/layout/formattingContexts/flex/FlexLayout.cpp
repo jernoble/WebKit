@@ -308,6 +308,7 @@ FlexLayout::SizeList FlexLayout::computeMainSizeForFlexItems(const LogicalFlexIt
             }
             return availableMainSpaceForLineContent - lineContentMainSize;
         };
+        auto initialFreeSpace = computedFreeSpace();
 
         auto minimumViolationList = Vector<size_t> { };
         auto maximumViolationList = Vector<size_t> { };
@@ -327,8 +328,11 @@ FlexLayout::SizeList FlexLayout::computeMainSizeForFlexItems(const LogicalFlexIt
                 auto totalFlexFactor = 0.f;
                 for (auto nonFrozenIndex : nonFrozenSet)
                     totalFlexFactor += shouldUseFlexGrowFactor ? flexItems[nonFrozenIndex].growFactor() : flexItems[nonFrozenIndex].shrinkFactor();
-                if (totalFlexFactor < 1)
-                    freeSpace *= totalFlexFactor;
+                if (totalFlexFactor < 1) {
+                    auto freeSpaceCandidate = LayoutUnit { initialFreeSpace * totalFlexFactor };
+                    if (freeSpaceCandidate.abs() < freeSpace.abs())
+                        freeSpace = freeSpaceCandidate;
+                }
             };
             adjustFreeSpaceWithFlexFactors();
 
@@ -457,7 +461,7 @@ FlexLayout::LinesCrossSizeList FlexLayout::crossSizeForFlexLines(const LineRange
         flexLinesCrossSizeList[lineIndex] = std::max(maximumHypotheticalOuterCrossSize, maximumAscent + maximumDescent);
         if (isSingleLineFlexContainer()) {
             auto minimumCrossSize = crossAxis.minimumSize.value_or(flexLinesCrossSizeList[lineIndex]);
-            auto maximumCrossSize = crossAxis.maximumSize.value_or(flexLinesCrossSizeList[lineIndex]);
+            auto maximumCrossSize = crossAxis.maximumSize.value_or(LayoutUnit::max());
             flexLinesCrossSizeList[lineIndex] = std::min(maximumCrossSize, std::max(minimumCrossSize, flexLinesCrossSizeList[lineIndex]));
         }
     }

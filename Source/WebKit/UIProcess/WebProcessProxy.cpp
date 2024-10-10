@@ -83,6 +83,7 @@
 #include "WebUserContentControllerProxy.h"
 #include "WebsiteData.h"
 #include "WebsiteDataFetchOption.h"
+#include <WebCore/AudioSession.h>
 #include <WebCore/DiagnosticLoggingKeys.h>
 #include <WebCore/PermissionName.h>
 #include <WebCore/PlatformMediaSessionManager.h>
@@ -330,9 +331,6 @@ WebProcessProxy::WebProcessProxy(WebProcessPool& processPool, WebsiteDataStore* 
     , m_shutdownPreventingScopeCounter([this](RefCounterEvent event) { if (event == RefCounterEvent::Decrement) maybeShutDown(); })
     , m_webLockRegistry(websiteDataStore ? makeUnique<WebLockRegistryProxy>(*this) : nullptr)
     , m_webPermissionController(makeUnique<WebPermissionControllerProxy>(*this))
-#if ENABLE(ROUTING_ARBITRATION)
-    , m_routingArbitrator(makeUniqueRef<AudioSessionRoutingArbitratorProxy>(*this))
-#endif
 {
     RELEASE_ASSERT(isMainThreadOrCheckDisabled());
     WEBPROCESSPROXY_RELEASE_LOG(Process, "constructor:");
@@ -725,7 +723,8 @@ void WebProcessProxy::shutDown()
         m_webLockRegistry->processDidExit();
 
 #if ENABLE(ROUTING_ARBITRATION)
-    m_routingArbitrator->processDidTerminate();
+    if (m_routingArbitrator)
+        m_routingArbitrator->processDidTerminate();
 #endif
 
     Ref<WebProcessPool> { processPool() }->disconnectProcess(*this);
@@ -1283,7 +1282,8 @@ void WebProcessProxy::processDidTerminateOrFailedToLaunch(ProcessTerminationReas
     }
 
 #if ENABLE(ROUTING_ARBITRATION)
-    m_routingArbitrator->processDidTerminate();
+    if (m_routingArbitrator)
+        m_routingArbitrator->processDidTerminate();
 #endif
 
     // There is a nested transaction in WebPageProxy::resetStateAfterProcessExited() that we don't want to commit before the client call below (dispatchProcessDidTerminate).
@@ -1299,7 +1299,7 @@ void WebProcessProxy::processDidTerminateOrFailedToLaunch(ProcessTerminationReas
     }
 
     for (auto& page : pages)
-        page->dispatchProcessDidTerminate(reason);
+        page->dispatchProcessDidTerminate(*this, reason);
 
     for (auto& remotePage : m_remotePages)
         remotePage.processDidTerminate(coreProcessIdentifier());
@@ -1469,18 +1469,20 @@ void WebProcessProxy::recordUserGestureAuthorizationToken(PageIdentifier pageID,
     });
 }
 
-RefPtr<API::UserInitiatedAction> WebProcessProxy::userInitiatedActivity(uint64_t identifier)
+RefPtr<API::UserInitiatedAction> WebProcessProxy::userInitiatedActivity(std::optional<UserGestureTokenIdentifier> identifier)
 {
-    if (!UserInitiatedActionMap::isValidKey(identifier) || !identifier)
+    if (!identifier)
         return nullptr;
 
-    auto result = m_userInitiatedActionMap.ensure(identifier, [] { return API::UserInitiatedAction::create(); });
+    auto result = m_userInitiatedActionMap.ensure(*identifier, [] {
+        return API::UserInitiatedAction::create();
+    });
     return result.iterator->value;
 }
 
-RefPtr<API::UserInitiatedAction> WebProcessProxy::userInitiatedActivity(PageIdentifier pageID, std::optional<WTF::UUID> authorizationToken, uint64_t identifier)
+RefPtr<API::UserInitiatedAction> WebProcessProxy::userInitiatedActivity(PageIdentifier pageID, std::optional<WTF::UUID> authorizationToken, std::optional<UserGestureTokenIdentifier> identifier)
 {
-    if (!UserInitiatedActionMap::isValidKey(identifier) || !identifier)
+    if (!identifier)
         return nullptr;
 
     if (authorizationToken) {
@@ -1488,7 +1490,7 @@ RefPtr<API::UserInitiatedAction> WebProcessProxy::userInitiatedActivity(PageIden
         if (authorizationTokenMapByPageIterator != m_userInitiatedActionByAuthorizationTokenMap.end()) {
             auto it = authorizationTokenMapByPageIterator->value.find(*authorizationToken);
             if (it != authorizationTokenMapByPageIterator->value.end()) {
-                auto result = m_userInitiatedActionMap.ensure(identifier, [it] {
+                auto result = m_userInitiatedActionMap.ensure(*identifier, [it] {
                     return it->value;
                 });
                 return result.iterator->value;
@@ -1516,9 +1518,8 @@ bool WebProcessProxy::isResponsive() const
     return responsivenessTimer().isResponsive() && m_backgroundResponsivenessTimer.isResponsive();
 }
 
-void WebProcessProxy::didDestroyUserGestureToken(PageIdentifier pageID, uint64_t identifier)
+void WebProcessProxy::didDestroyUserGestureToken(PageIdentifier pageID, UserGestureTokenIdentifier identifier)
 {
-    ASSERT(UserInitiatedActionMap::isValidKey(identifier));
     auto authorizationTokenMapByPageIterator = m_userInitiatedActionByAuthorizationTokenMap.find(pageID);
     if (authorizationTokenMapByPageIterator != m_userInitiatedActionByAuthorizationTokenMap.end()) {
         if (auto removed = m_userInitiatedActionMap.take(identifier); removed && removed->authorizationToken()) {
@@ -2237,21 +2238,33 @@ WebProcessPool* WebProcessProxy::processPoolIfExists() const
     return m_processPool.get();
 }
 
-WebProcessPool& WebProcessProxy::processPool() const
-{
-    ASSERT(m_processPool);
-    return *m_processPool.get();
-}
-
 Ref<WebProcessPool> WebProcessProxy::protectedProcessPool() const
 {
     return processPool();
+}
+
+void WebProcessProxy::enableMediaPlaybackIfNecessary()
+{
+    if (!m_sharedPreferencesForWebProcess.mediaPlaybackEnabled)
+        return;
+
+#if USE(AUDIO_SESSION)
+    if (!WebCore::AudioSession::enableMediaPlayback())
+        return;
+#endif
+
+#if ENABLE(ROUTING_ARBITRATION)
+    ASSERT(!m_routingArbitrator);
+    m_routingArbitrator = makeUnique<AudioSessionRoutingArbitratorProxy>(*this);
+#endif
 }
 
 std::optional<SharedPreferencesForWebProcess> WebProcessProxy::updateSharedPreferencesForWebProcess(const WebPreferencesStore& preferencesStore)
 {
     if (WebKit::updateSharedPreferencesForWebProcess(m_sharedPreferencesForWebProcess, preferencesStore)) {
         ++m_sharedPreferencesForWebProcess.version;
+        enableMediaPlaybackIfNecessary();
+
         return m_sharedPreferencesForWebProcess;
     }
     return std::nullopt;
@@ -2435,7 +2448,7 @@ void WebProcessProxy::startBackgroundActivityForFullscreenInput()
     if (m_backgroundActivityForFullscreenFormControls)
         return;
 
-    m_backgroundActivityForFullscreenFormControls = throttler().backgroundActivity("Fullscreen input"_s).moveToUniquePtr();
+    m_backgroundActivityForFullscreenFormControls = throttler().backgroundActivity("Fullscreen input"_s);
     WEBPROCESSPROXY_RELEASE_LOG(ProcessSuspension, "startBackgroundActivityForFullscreenInput: UIProcess is taking a background assertion because it is presenting fullscreen UI for form controls.");
 }
 
@@ -2496,7 +2509,7 @@ void WebProcessProxy::updateRemoteWorkerProcessAssertion(RemoteWorkerType worker
         return &process != this && !!process.m_foregroundToken;
     });
     if (shouldTakeForegroundActivity) {
-        if (!ProcessThrottler::isValidForegroundActivity(workerInformation->activity))
+        if (!ProcessThrottler::isValidForegroundActivity(workerInformation->activity.get()))
             workerInformation->activity = protectedThrottler()->foregroundActivity("Worker for foreground view(s)"_s);
         return;
     }
@@ -2505,14 +2518,14 @@ void WebProcessProxy::updateRemoteWorkerProcessAssertion(RemoteWorkerType worker
         return &process != this && !!process.m_backgroundToken;
     });
     if (shouldTakeBackgroundActivity) {
-        if (!ProcessThrottler::isValidBackgroundActivity(workerInformation->activity))
+        if (!ProcessThrottler::isValidBackgroundActivity(workerInformation->activity.get()))
             workerInformation->activity = protectedThrottler()->backgroundActivity("Worker for background view(s)"_s);
         return;
     }
 
     if (workerType == RemoteWorkerType::ServiceWorker && m_hasServiceWorkerBackgroundProcessing) {
         WEBPROCESSPROXY_RELEASE_LOG(ProcessSuspension, "Service Worker for background processing");
-        if (!ProcessThrottler::isValidBackgroundActivity(workerInformation->activity))
+        if (!ProcessThrottler::isValidBackgroundActivity(workerInformation->activity.get()))
             workerInformation->activity = protectedThrottler()->backgroundActivity("Service Worker for background processing"_s);
         return;
     }
@@ -2544,12 +2557,12 @@ void WebProcessProxy::unregisterRemoteWorkerClientProcess(RemoteWorkerType worke
 
 bool WebProcessProxy::hasServiceWorkerForegroundActivityForTesting() const
 {
-    return m_serviceWorkerInformation ? ProcessThrottler::isValidForegroundActivity(m_serviceWorkerInformation->activity) : false;
+    return m_serviceWorkerInformation && ProcessThrottler::isValidForegroundActivity(m_serviceWorkerInformation->activity.get());
 }
 
 bool WebProcessProxy::hasServiceWorkerBackgroundActivityForTesting() const
 {
-    return m_serviceWorkerInformation ? ProcessThrottler::isValidBackgroundActivity(m_serviceWorkerInformation->activity) : false;
+    return m_serviceWorkerInformation && ProcessThrottler::isValidBackgroundActivity(m_serviceWorkerInformation->activity.get());
 }
 
 void WebProcessProxy::startServiceWorkerBackgroundProcessing()

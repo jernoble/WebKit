@@ -43,6 +43,7 @@
 #include <WebCore/RegistrableDomain.h>
 #include <WebCore/ServiceWorkerTypes.h>
 #include <WebCore/Timer.h>
+#include <WebCore/UserGestureTokenIdentifier.h>
 #include <pal/HysteresisActivity.h>
 #include <pal/SessionID.h>
 #include <wtf/Forward.h>
@@ -119,6 +120,7 @@ struct ServiceWorkerContextData;
 namespace WebKit {
 
 class AudioMediaStreamTrackRendererInternalUnitManager;
+class AudioSessionRoutingArbitrator;
 class GamepadData;
 class GPUProcessConnection;
 class InjectedBundle;
@@ -162,7 +164,7 @@ struct WebsiteDataStoreParameters;
 enum class RemoteWorkerType : uint8_t;
 enum class WebsiteDataType : uint32_t;
 
-using WebTransportSessionIdentifier = LegacyNullableObjectIdentifier<WebTransportSessionIdentifierType>;
+using WebTransportSessionIdentifier = ObjectIdentifier<WebTransportSessionIdentifierType>;
 
 #if PLATFORM(IOS_FAMILY)
 class LayerHostingContext;
@@ -180,7 +182,7 @@ public:
     using SubResourceDomain = WebCore::RegistrableDomain;
 
     static WebProcess& singleton();
-    static constexpr WebCore::AuxiliaryProcessType processType = WebCore::AuxiliaryProcessType::WebContent;
+    static constexpr WTF::AuxiliaryProcessType processType = WTF::AuxiliaryProcessType::WebContent;
 
     template <typename T>
     T* supplement()
@@ -232,7 +234,7 @@ public:
 
     WebPageGroupProxy* webPageGroup(const WebPageGroupData&);
 
-    uint64_t userGestureTokenIdentifier(std::optional<WebCore::PageIdentifier>, RefPtr<WebCore::UserGestureToken>);
+    std::optional<WebCore::UserGestureTokenIdentifier> userGestureTokenIdentifier(std::optional<WebCore::PageIdentifier>, RefPtr<WebCore::UserGestureToken>);
     void userGestureTokenDestroyed(WebCore::PageIdentifier, WebCore::UserGestureToken&);
     
     const TextCheckerState& textCheckerState() const { return m_textCheckerState; }
@@ -448,6 +450,10 @@ public:
 
     bool haveStorageAccessQuirksForDomain(const WebCore::RegistrableDomain&);
     void updateCachedCookiesEnabled();
+    void enableMediaPlayback();
+#if ENABLE(ROUTING_ARBITRATION)
+    AudioSessionRoutingArbitrator* audioSessionRoutingArbitrator() const { return m_routingArbitrator.get(); }
+#endif
 
 private:
     WebProcess();
@@ -784,7 +790,7 @@ private:
     ProcessType m_processType { ProcessType::WebContent };
 #endif
 
-    WeakHashMap<WebCore::UserGestureToken, uint64_t> m_userGestureTokens;
+    WeakHashMap<WebCore::UserGestureToken, WebCore::UserGestureTokenIdentifier> m_userGestureTokens;
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
     OptionSet<DMABufRendererBufferMode> m_dmaBufRendererBufferMode;
@@ -836,6 +842,9 @@ private:
 
 #if ENABLE(MEDIA_STREAM)
     std::unique_ptr<SpeechRecognitionRealtimeMediaSourceManager> m_speechRecognitionRealtimeMediaSourceManager;
+#endif
+#if ENABLE(ROUTING_ARBITRATION)
+    std::unique_ptr<AudioSessionRoutingArbitrator> m_routingArbitrator;
 #endif
     bool m_hadMainFrameMainResourcePrivateRelayed { false };
     bool m_imageAnimationEnabled { true };

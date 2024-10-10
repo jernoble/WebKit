@@ -335,7 +335,7 @@ template<typename> class ProcessQualified;
 template<typename> class RectEdges;
 
 using BackForwardItemIdentifier = ProcessQualified<ObjectIdentifier<BackForwardItemIdentifierType>>;
-using DictationContext = LegacyNullableObjectIdentifier<DictationContextType>;
+using DictationContext = ObjectIdentifier<DictationContextType>;
 using FloatBoxExtent = RectEdges<float>;
 using FramesPerSecond = unsigned;
 using IntDegrees = int32_t;
@@ -353,9 +353,9 @@ using PlaybackTargetClientContextIdentifier = LegacyNullableObjectIdentifier<Pla
 using PointerID = uint32_t;
 using ResourceLoaderIdentifier = AtomicObjectIdentifier<ResourceLoader>;
 using SandboxFlags = OptionSet<SandboxFlag>;
-using ScrollingNodeID = ProcessQualified<LegacyNullableObjectIdentifier<ScrollingNodeIDType>>;
+using ScrollingNodeID = ProcessQualified<ObjectIdentifier<ScrollingNodeIDType>>;
 using SleepDisablerIdentifier = ObjectIdentifier<SleepDisablerIdentifierType>;
-using UserMediaRequestIdentifier = LegacyNullableObjectIdentifier<UserMediaRequestIdentifierType>;
+using UserMediaRequestIdentifier = ObjectIdentifier<UserMediaRequestIdentifierType>;
 
 } // namespace WebCore
 
@@ -638,7 +638,7 @@ public:
     bool shouldEnableLockdownMode() const;
 
     bool hasSameGPUAndNetworkProcessPreferencesAs(const API::PageConfiguration&) const;
-    bool hasSameGPUAndNetworkProcessPreferencesAs(const WebPageProxy& page) const { return hasSameGPUAndNetworkProcessPreferencesAs(page.configuration()); }
+    bool hasSameGPUAndNetworkProcessPreferencesAs(const WebPageProxy& page) const { return hasSameGPUAndNetworkProcessPreferencesAs(Ref { page }->configuration()); }
 
     void processIsNoLongerAssociatedWithPage(WebProcessProxy&);
 
@@ -728,6 +728,7 @@ public:
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)
     PlaybackSessionManagerProxy* playbackSessionManager();
+    RefPtr<PlaybackSessionManagerProxy> protectedPlaybackSessionManager();
     VideoPresentationManagerProxy* videoPresentationManager();
     void setMockVideoPresentationModeEnabled(bool);
 #endif
@@ -1320,6 +1321,9 @@ public:
     double viewScaleFactor() const { return m_viewScaleFactor; }
     void scaleView(double scale);
     void setShouldScaleViewToFitDocument(bool);
+#if ENABLE(PDF_PLUGIN)
+    void setPluginScaleFactor(double scaleFactor, WebCore::IntPoint origin);
+#endif
     
     float deviceScaleFactor() const;
     void setIntrinsicDeviceScaleFactor(float);
@@ -1529,7 +1533,7 @@ public:
     void processDidBecomeResponsive();
     void resetStateAfterProcessTermination(ProcessTerminationReason);
     void provisionalProcessDidTerminate();
-    void dispatchProcessDidTerminate(ProcessTerminationReason);
+    void dispatchProcessDidTerminate(WebProcessProxy&, ProcessTerminationReason);
     void willChangeProcessIsResponsive();
     void didChangeProcessIsResponsive();
 
@@ -2475,6 +2479,10 @@ public:
     void didEndPartialIntelligenceTextAnimationImpl();
 #endif
 
+#if PLATFORM(COCOA)
+    void createTextIndicatorForElementWithID(const String& elementID, CompletionHandler<void(std::optional<WebCore::TextIndicatorData>&&)>&&);
+#endif
+
     void resetVisibilityAdjustmentsForTargetedElements(const Vector<Ref<API::TargetedElementInfo>>&, CompletionHandler<void(bool)>&&);
     void adjustVisibilityForTargetedElements(const Vector<Ref<API::TargetedElementInfo>>&, CompletionHandler<void(bool)>&&);
     void numberOfVisibilityAdjustmentRects(CompletionHandler<void(uint64_t)>&&);
@@ -2612,6 +2620,7 @@ private:
 #endif
 
     void updateRemoteFrameSize(WebCore::FrameIdentifier, WebCore::IntSize);
+    void frameCompositedBoundsChanged(WebCore::FrameIdentifier, WebCore::IntPoint);
     void updateSandboxFlags(IPC::Connection&, WebCore::FrameIdentifier, WebCore::SandboxFlags);
 
     void didDestroyNavigation(WebCore::NavigationIdentifier);
@@ -3176,6 +3185,8 @@ private:
     void dropOpeningAppLinkActivity();
     bool hasValidOpeningAppLinkActivity() const;
 #endif
+
+    Ref<BrowsingContextGroup> protectedBrowsingContextGroup() const;
 
     UniqueRef<Internals> m_internals;
     Identifier m_identifier;

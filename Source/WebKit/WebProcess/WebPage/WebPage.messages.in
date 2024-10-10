@@ -302,6 +302,9 @@ GenerateSyntheticEditingCommand(enum:uint8_t WebKit::SyntheticEditingCommandType
     DidScalePageInViewCoordinates(double scale, WebCore::IntPoint origin)
     DidScalePageRelativeToScrollPosition(double scale, WebCore::IntPoint origin)
     DidScaleView(double scale)
+#if ENABLE(PDF_PLUGIN)
+    SetPluginScaleFactor(double scale, WebCore::IntPoint origin);
+#endif
 
     SetUseFixedLayout(bool fixed)
     SetFixedLayoutSize(WebCore::IntSize size)
@@ -756,6 +759,7 @@ GenerateSyntheticEditingCommand(enum:uint8_t WebKit::SyntheticEditingCommandType
     UseRedirectionForCurrentNavigation(WebCore::ResourceResponse response);
 
     UpdateFrameSize(WebCore::FrameIdentifier frame, WebCore::IntSize newSize)
+    FrameCompositedBoundsChanged(WebCore::FrameIdentifier frame, WebCore::IntPoint contentsOffset)
 
     DispatchLoadEventToFrameOwnerElement(WebCore::FrameIdentifier frameID)
 
@@ -800,6 +804,10 @@ GenerateSyntheticEditingCommand(enum:uint8_t WebKit::SyntheticEditingCommandType
     EnableTextAnimationTypeForElementWithID(String elementID);
 
     IntelligenceTextAnimationsDidComplete();
+#endif
+
+#if PLATFORM(COCOA)
+    CreateTextIndicatorForElementWithID(String elementID) -> (std::optional<WebCore::TextIndicatorData> textIndicator)
 #endif
 
     TakeSnapshotForTargetedElement(WebCore::ElementIdentifier elementID, WebCore::ScriptExecutionContextIdentifier documentID) -> (std::optional<WebCore::ShareableBitmapHandle> image)
