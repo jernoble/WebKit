@@ -134,6 +134,33 @@ void WebCoreDecompressionSession::maybeBecomeReadyForMoreMediaData()
     });
 }
 
+RetainPtr<CMBufferQueueRef> WebCoreDecompressionSession::createBufferQueue()
+{
+    // CMBufferCallbacks contains 64-bit pointers that aren't 8-byte aligned. To suppress the linker
+    // warning about this, we prepend 4 bytes of padding when building.
+    const size_t padSize = 4;
+
+#pragma pack(push, 4)
+    struct BufferCallbacks { uint8_t pad[padSize]; CMBufferCallbacks callbacks; } callbacks { { }, {
+        0,
+        nullptr,
+        &getDecodeTime,
+        &getPresentationTime,
+        &getDuration,
+        nullptr,
+        &compareBuffers,
+        nullptr,
+        nullptr,
+    } };
+#pragma pack(pop)
+    static_assert(sizeof(callbacks.callbacks.version) == sizeof(uint32_t), "Version field must be 4 bytes");
+    static_assert(alignof(BufferCallbacks) == 4, "CMBufferCallbacks struct must have 4 byte alignment");
+
+    CMBufferQueueRef outQueue { nullptr };
+    PAL::CMBufferQueueCreate(kCFAllocatorDefault, kMaximumCapacity, &callbacks.callbacks, &outQueue);
+    return adoptCF(outQueue);
+}
+
 void WebCoreDecompressionSession::enqueueSample(CMSampleBufferRef sampleBuffer, bool displaying)
 {
     CMItemCount itemCount = 0;
@@ -145,31 +172,8 @@ void WebCoreDecompressionSession::enqueueSample(CMSampleBufferRef sampleBuffer, 
     if (noErr != PAL::CMSampleBufferGetSampleTimingInfoArray(sampleBuffer, itemCount, timingInfoArray.data(), nullptr))
         return;
 
-    // CMBufferCallbacks contains 64-bit pointers that aren't 8-byte aligned. To suppress the linker
-    // warning about this, we prepend 4 bytes of padding when building.
-    const size_t padSize = 4;
-
-    if (!m_producerQueue) {
-        CMBufferQueueRef outQueue { nullptr };
-#pragma pack(push, 4)
-        struct BufferCallbacks { uint8_t pad[padSize]; CMBufferCallbacks callbacks; } callbacks { { }, {
-            0,
-            nullptr,
-            &getDecodeTime,
-            &getPresentationTime,
-            &getDuration,
-            nullptr,
-            &compareBuffers,
-            nullptr,
-            nullptr,
-        } };
-#pragma pack(pop)
-        static_assert(sizeof(callbacks.callbacks.version) == sizeof(uint32_t), "Version field must be 4 bytes");
-        static_assert(alignof(BufferCallbacks) == 4, "CMBufferCallbacks struct must have 4 byte alignment");
-
-        PAL::CMBufferQueueCreate(kCFAllocatorDefault, kMaximumCapacity, &callbacks.callbacks, &outQueue);
-        m_producerQueue = adoptCF(outQueue);
-    }
+    if (!m_producerQueue)
+        m_producerQueue = createBufferQueue();
 
     ++m_framesBeingDecoded;
 
