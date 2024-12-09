@@ -104,6 +104,7 @@ static void WebAVPlayerLayerView_setVideoView(id aSelf, SEL, UIView *videoView)
 {
     __AVPlayerLayerView *playerLayerView = aSelf;
     WebAVPlayerLayer *webAVPlayerLayer = (WebAVPlayerLayer *)[playerLayerView playerLayer];
+    [playerLayerView addSubview:videoView];
     [webAVPlayerLayer setVideoSublayer:[videoView layer]];
 }
 
@@ -117,11 +118,11 @@ static void WebAVPlayerLayerView_startRoutingVideoToPictureInPicturePlayerLayerV
     auto *pipPlayerLayer = (WebAVPlayerLayer *)[pipView layer];
     [playerLayer setVideoGravity:AVLayerVideoGravityResizeAspectFill];
     [pipPlayerLayer setPresentationModel:playerLayer.presentationModel];
+    [pipView addSubview:playerLayerView.videoView];
     [pipPlayerLayer setVideoSublayer:playerLayer.videoSublayer];
     [pipPlayerLayer setVideoDimensions:playerLayer.videoDimensions];
     [pipPlayerLayer setVideoGravity:playerLayer.videoGravity];
     [pipPlayerLayer setPlayerController:playerLayer.playerController];
-    [pipView addSubview:playerLayerView.videoView];
     [pipPlayerLayer setCaptionsLayer:playerLayer.captionsLayer];
     [pipPlayerLayer layoutSublayers];
 }

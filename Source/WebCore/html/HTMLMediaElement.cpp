@@ -7582,12 +7582,6 @@ void HTMLMediaElement::waitForPreparedForInlineThen(Function<void()>&& completio
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)
 
-void HTMLMediaElement::willExitFullscreen()
-{
-    if (RefPtr player = m_player)
-        player->updateVideoFullscreenInlineImage();
-}
-
 bool HTMLMediaElement::isVideoLayerInline()
 {
     return !m_videoFullscreenLayer;
