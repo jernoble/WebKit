@@ -145,6 +145,14 @@ void RemoteLayerHostingManager::createRemoteLayer(PlaybackSessionContextIdentifi
     }
 }
 
+void RemoteLayerHostingManager::applyVideoGravity(RemoteLayerInfo& info)
+{
+    if (info.videoGravity.isNull() || ![info.contentLayer respondsToSelector:@selector(setVideoGravity:)])
+        return;
+
+    [info.contentLayer performSelector:@selector(setVideoGravity:) withObject:info.videoGravity.createNSString().get()];
+}
+
 void RemoteLayerHostingManager::setContentLayer(RemoteLayerInfo& info, RetainPtr<CALayer>&& contentLayer)
 {
     if (info.contentLayer == contentLayer)
@@ -160,6 +168,7 @@ void RemoteLayerHostingManager::setContentLayer(RemoteLayerInfo& info, RetainPtr
     info.hostingContext->setRootLayer(info.contentLayer.get());
     if (!info.size.isEmpty())
         [info.contentLayer setFrame:CGRectMake(0, 0, info.size.width(), info.size.height())];
+    applyVideoGravity(info);
 
     [CATransaction commit];
 }
@@ -238,8 +247,7 @@ void RemoteLayerHostingManager::setRemoteLayerVideoGravityFenced(PlaybackSession
     if (info.contentLayer) {
         [CATransaction begin];
         [CATransaction setDisableActions:YES];
-        if ([info.contentLayer respondsToSelector:@selector(setVideoGravity:)])
-            [info.contentLayer performSelector:@selector(setVideoGravity:) withObject:videoGravity.createNSString().get()];
+        applyVideoGravity(info);
         [CATransaction commit];
     }
 

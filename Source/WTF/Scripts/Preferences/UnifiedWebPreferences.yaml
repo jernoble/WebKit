@@ -5238,7 +5238,7 @@ RegExpBufferBoundariesEnabled:
 
 RemoteLayerHostingBypassesWebContentProcess:
   type: bool
-  status: unstable
+  status: testable
   category: media
   humanReadableName: "GPU Process: Remote Layer Hosting Bypasses WebContent Process"
   humanReadableDescription: "Host the GPU process video layer directly in the UI process, bypassing the WebContent process"

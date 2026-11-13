@@ -52,7 +52,7 @@ namespace WebKit {
 class GPUProcess;
 class LayerHostingContext;
 
-class RemoteLayerHostingManager
+class RemoteLayerHostingManager final
     : public RefCounted<RemoteLayerHostingManager>
     , private IPC::MessageReceiver {
     WTF_MAKE_TZONE_ALLOCATED(RemoteLayerHostingManager);
@@ -78,7 +78,6 @@ private:
 
     // IPC::MessageReceiver
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
-    void didReceiveSyncMessage(IPC::Connection&, IPC::Decoder&, UniqueRef<IPC::Encoder>&) override;
 
     // Messages from RemoteLayerHostingManagerProxy
     void setRemoteLayerSizeFenced(PlaybackSessionContextIdentifier, const WebCore::FloatSize&, WTF::MachSendRightAnnotated&&);
@@ -96,6 +95,7 @@ private:
     };
 
     void createRemoteLayer(PlaybackSessionContextIdentifier, RemoteVideoLayerSource&, RetainPtr<CALayer>&&, bool canShowWhileLocked);
+    void applyVideoGravity(RemoteLayerInfo&);
     void setContentLayer(RemoteLayerInfo&, RetainPtr<CALayer>&&);
     void removeRemoteLayer(PlaybackSessionContextIdentifier);
 

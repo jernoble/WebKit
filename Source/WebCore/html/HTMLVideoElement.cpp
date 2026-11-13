@@ -77,10 +77,6 @@
 #include "PictureInPictureObserver.h"
 #endif
 
-#if USE(COORDINATED_GRAPHICS)
-#include "CoordinatedPlatformLayerBufferProxy.h"
-#endif
-
 #if RELEASE_LOG_DISABLED
 #define HTMLVIDEOELEMENT_RELEASE_LOG(formatString, ...)
 #else

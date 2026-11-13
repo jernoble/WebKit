@@ -35,7 +35,7 @@ messages -> RemoteLayerHostingManager {
 
     CountRemoteLayersForTesting() -> (uint64_t count)
     SupersedeAndDetachSourcesForTesting() -> ()
-    RemoteLayerTreeAsTextForTesting() -> (String description) Synchronous
+    RemoteLayerTreeAsTextForTesting() -> (String description)
 }
 
 #endif

@@ -6325,13 +6325,17 @@ NODELETE static inline OptionSet<WebCore::LayoutMilestone> layoutMilestones(_WKR
     completionHandler();
 }
 
-- (NSString *)_gpuProcessRemoteLayerTreeAsTextForTesting
+- (void)_gpuProcessRemoteLayerTreeAsTextForTesting:(void (^)(NSString *))completionHandler
 {
 #if ENABLE(GPU_PROCESS) && PLATFORM(COCOA)
-    if (RefPtr gpuProcess = _page->configuration().processPool().gpuProcess())
-        return protect(gpuProcess->remoteLayerHostingManagerProxy())->gpuProcessRemoteLayerTreeAsTextForTesting().createNSString().autorelease();
+    if (RefPtr gpuProcess = _page->configuration().processPool().gpuProcess()) {
+        protect(gpuProcess->remoteLayerHostingManagerProxy())->gpuProcessRemoteLayerTreeAsTextForTesting([handler = makeBlockPtr(completionHandler)](String&& description) {
+            handler(description.createNSString().get());
+        });
+        return;
+    }
 #endif
-    return @"";
+    completionHandler(@"");
 }
 
 - (void)_getContentsOfAllFramesAsStringWithCompletionHandler:(void (^)(NSString *))completionHandler

@@ -741,6 +741,7 @@ std::optional<FloatRect> RemoteAudioVideoRendererProxyManager::hostedVideoLayerB
 }
 #endif
 
+#if PLATFORM(COCOA)
 bool RemoteAudioVideoRendererProxyManager::remoteLayerHostingBypassesWebContentProcess() const
 {
     RefPtr connection = m_gpuConnectionToWebProcess.get();
@@ -876,6 +877,13 @@ void RemoteAudioVideoRendererProxyManager::setVideoLayerSizeFenced(RemoteAudioVi
     MESSAGE_CHECK(m_renderers.contains(identifier));
 
     auto& context = contextFor(identifier);
+
+    // When the layer is hosted directly by the UI process, RemoteLayerHostingManager is the
+    // only thing that sizes it. The WebContent process only sends this to keep its own
+    // bookkeeping up to date, and must not affect the layer.
+    if (context.remoteVideoLayerSource)
+        return;
+
     context.layerHostingContextManager.setVideoLayerSizeFenced(size, WTF::MachSendRightAnnotated { sendRightAnnotated }, [&] {
         context.renderer->setVideoLayerSizeFenced(size, WTF::move(sendRightAnnotated));
     });

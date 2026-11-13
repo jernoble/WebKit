@@ -967,7 +967,7 @@ RetainPtr<CocoaView> VideoPresentationManagerProxy::createRemoteLayerHostViewWit
             return nil;
 
 #if USE(EXTENSIONKIT)
-        remoteLayerHostingManager->addVisibilityPropogationView(contextId);
+        remoteLayerHostingManager->addVisibilityPropagationView(contextId);
 #endif
 
         interface->setLayerHostView(view.get());
@@ -1686,7 +1686,7 @@ void VideoPresentationManagerProxy::didCleanupFullscreen(PlaybackSessionContextI
     if (isHostedByUIProcess(contextId)) {
 #if USE(EXTENSIONKIT)
         if (RefPtr remoteLayerHostingManager = this->remoteLayerHostingManager())
-            remoteLayerHostingManager->removeVisibilityPropogationView(contextId);
+            remoteLayerHostingManager->removeVisibilityPropagationView(contextId);
 #endif
     } else {
 #if HAVE(VISIBILITY_PROPAGATION_VIEW)
@@ -1734,9 +1734,13 @@ void VideoPresentationManagerProxy::setVideoLayerFrame(PlaybackSessionContextIde
     // The captions layer above lives in this process and must be updated on both paths.
     // The video layer geometry, however, is forwarded to the GPU process directly by
     // -[WKVideoLayerHost setFrame:] when remote layer hosting bypasses the WebContent
-    // process, so there is nothing further to send from here.
-    if (isHostedByUIProcess(contextId))
+    // process. The WebContent process still needs the new frame to keep HTMLMediaElement's
+    // video layer size and the text track representation bounds current, but the GPU process
+    // ignores the resulting size for hosted layers, so no fence is needed.
+    if (isHostedByUIProcess(contextId)) {
+        sendToWebProcess(contextId, Messages::VideoPresentationManager::SetVideoLayerFrameFenced(contextId.object(), frame, WTF::MachSendRightAnnotated { }));
         return;
+    }
 
     WTF::MachSendRightAnnotated sendRightAnnotated;
 #if PLATFORM(IOS_FAMILY)
@@ -1977,7 +1981,7 @@ void VideoPresentationManagerProxy::setHostedByUIProcess(PlaybackSessionContextI
     if (wasHostedByUIProcess) {
         if (RefPtr remoteLayerHostingManager = this->remoteLayerHostingManager()) {
 #if USE(EXTENSIONKIT)
-            remoteLayerHostingManager->removeVisibilityPropogationView(contextId);
+            remoteLayerHostingManager->removeVisibilityPropagationView(contextId);
 #endif
             remoteLayerHostingManager->releaseLayerHostForIdentifier(contextId);
         }

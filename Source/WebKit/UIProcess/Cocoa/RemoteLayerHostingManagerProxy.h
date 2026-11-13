@@ -52,7 +52,7 @@ class WebPageProxy;
 
 using LayerHostingContextID = uint32_t;
 
-class RemoteLayerHostingManagerProxy
+class RemoteLayerHostingManagerProxy final
     : public RefCounted<RemoteLayerHostingManagerProxy>
     , public IPC::MessageReceiver {
     WTF_MAKE_TZONE_ALLOCATED(RemoteLayerHostingManagerProxy);
@@ -76,8 +76,8 @@ public:
     void setRemoteLayerVideoGravity(PlaybackSessionContextIdentifier, const String&);
 
 #if USE(EXTENSIONKIT)
-    void addVisibilityPropogationView(PlaybackSessionContextIdentifier);
-    void removeVisibilityPropogationView(PlaybackSessionContextIdentifier);
+    void addVisibilityPropagationView(PlaybackSessionContextIdentifier);
+    void removeVisibilityPropagationView(PlaybackSessionContextIdentifier);
 #endif
 
     uint64_t hostedLayerCountForTesting() const { return m_hostedLayers.size(); }
@@ -85,7 +85,7 @@ public:
     void countGPUProcessRemoteLayersForTesting(CompletionHandler<void(uint64_t)>&&);
     void supersedeAndDetachGPUProcessSourcesForTesting(CompletionHandler<void()>&&);
 
-    String gpuProcessRemoteLayerTreeAsTextForTesting();
+    void gpuProcessRemoteLayerTreeAsTextForTesting(CompletionHandler<void(String&&)>&&);
 
 private:
     friend class GPUProcessProxy;

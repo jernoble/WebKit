@@ -147,9 +147,21 @@ static RetainPtr<CALayer> findCaptionsLayer(CALayer *root)
 }
 #endif
 
+static RetainPtr<NSString> gpuProcessRemoteLayerTree(TestWKWebView *webView)
+{
+    __block bool done = false;
+    __block RetainPtr<NSString> result;
+    [webView _gpuProcessRemoteLayerTreeAsTextForTesting:^(NSString *tree) {
+        result = tree;
+        done = true;
+    }];
+    Util::run(&done);
+    return result;
+}
+
 // Runs a block that makes the test page begin playback, and waits for the page to report that
 // playback began or failed.
-static bool waitForPlayback(TestWKWebView *webView, NS_NOESCAPE void (^startPlayback)())
+static bool waitForPlayback(TestWKWebView *webView, NS_NOESCAPE dispatch_block_t startPlayback)
 {
     __block bool done = false;
     __block bool isPlaying = false;
@@ -433,17 +445,17 @@ TEST(RemoteLayerHosting, GPUProcessLayerTreeIsReachableForTesting)
     RetainPtr webView = createWebViewAndStartPlayback(true);
     CGSize hostSize = waitForStableVideoHostLayerFrameSize(webView.get());
 
-    NSString *gpuLayerTree = [webView _gpuProcessRemoteLayerTreeAsTextForTesting];
-    NSLog(@"GPU process layer tree:\n%@", gpuLayerTree);
+    RetainPtr gpuLayerTree = gpuProcessRemoteLayerTree(webView.get());
+    NSLog(@"GPU process layer tree:\n%@", gpuLayerTree.get());
 
-    EXPECT_GT(gpuLayerTree.length, 0u);
-    EXPECT_TRUE([gpuLayerTree containsString:@"remote layer "]);
-    EXPECT_FALSE([gpuLayerTree containsString:@"<no content layer>"]);
+    EXPECT_GT([gpuLayerTree.get() length], 0u);
+    EXPECT_TRUE([gpuLayerTree.get() containsString:@"remote layer "]);
+    EXPECT_FALSE([gpuLayerTree.get() containsString:@"<no content layer>"]);
 
     // The hosted content layer must sit at the origin of its hosting context, since its
     // position within the UI process layer tree is a property of the layer host there. The
     // UI process cannot see this, so it is only checkable through this dump.
-    EXPECT_TRUE([gpuLayerTree containsString:@"position=(0, 0)"]);
+    EXPECT_TRUE([gpuLayerTree.get() containsString:@"position=(0, 0)"]);
 
     // The size the GPU process was told to use must equal the size the layer host presents
     // at, or the video is rendered at one size and scaled to another. This holds because
@@ -451,7 +463,7 @@ TEST(RemoteLayerHosting, GPUProcessLayerTreeIsReachableForTesting)
     // resize with a transform, which -[WKVideoLayerHost setFrame:] cannot observe.
     NSString *expectedSize = [NSString stringWithFormat:@"size=(%g, %g)", hostSize.width, hostSize.height];
     NSLog(@"UI process host layer presents at (%g, %g), looking for \"%@\"", hostSize.width, hostSize.height, expectedSize);
-    EXPECT_TRUE([gpuLayerTree containsString:expectedSize]);
+    EXPECT_TRUE([gpuLayerTree.get() containsString:expectedSize]);
 }
 
 // With the setting disabled nothing is hosted through this mechanism, so the dump is empty.
@@ -460,7 +472,7 @@ TEST(RemoteLayerHosting, GPUProcessLayerTreeIsEmptyWhenDisabled)
     RetainPtr webView = createWebViewAndStartPlayback(false);
     waitForStableVideoHostLayerFrameSize(webView.get());
 
-    EXPECT_EQ(0u, [webView _gpuProcessRemoteLayerTreeAsTextForTesting].length);
+    EXPECT_EQ(0u, [gpuProcessRemoteLayerTree(webView.get()) length]);
 }
 
 #pragma mark - Lifetime
@@ -615,13 +627,15 @@ static void expectHostedVideoLayerCounts(TestWKWebView *webView, uint64_t expect
     EXPECT_EQ(expectedCount, gpuProcessHostedVideoLayerCount(webView));
 }
 
+typedef BOOL (^LayerTreePredicate)(NSString *);
+
 // Waits for the GPU process side of the hosting boundary to satisfy a predicate, and returns
 // the last dump taken.
-static RetainPtr<NSString> waitForGPUProcessLayerTree(TestWKWebView *webView, NS_NOESCAPE BOOL (^predicate)(NSString *))
+static RetainPtr<NSString> waitForGPUProcessLayerTree(TestWKWebView *webView, NS_NOESCAPE LayerTreePredicate predicate)
 {
     RetainPtr<NSString> gpuLayerTree;
     for (unsigned attempt = 0; attempt < 40; ++attempt) {
-        gpuLayerTree = [webView _gpuProcessRemoteLayerTreeAsTextForTesting];
+        gpuLayerTree = gpuProcessRemoteLayerTree(webView);
         if (predicate(gpuLayerTree.get()))
             break;
         Util::runFor(0.05_s);
@@ -729,7 +743,7 @@ TEST(RemoteLayerHosting, VideoLayerSurvivesSwitchingBetweenMediaSourceAndFile)
 
 static RetainPtr<NSString> gpuProcessHostedLayerSummary(TestWKWebView *webView)
 {
-    return [[[webView _gpuProcessRemoteLayerTreeAsTextForTesting] componentsSeparatedByString:@"\n"] firstObject];
+    return [[gpuProcessRemoteLayerTree(webView) componentsSeparatedByString:@"\n"] firstObject];
 }
 
 TEST(RemoteLayerHosting, SupersededSourceDoesNotTearDownItsSuccessorsLayer)

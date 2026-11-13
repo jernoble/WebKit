@@ -426,7 +426,7 @@ for this property.
 // A dump of the CALayer hierarchy on the GPU process side of the video layer hosting
 // boundary, which cannot be reached by walking this process's layers. Synchronous; testing
 // and debugging only.
-- (NSString *)_gpuProcessRemoteLayerTreeAsTextForTesting;
+- (void)_gpuProcessRemoteLayerTreeAsTextForTesting:(void (^)(NSString *))completionHandler;
 - (void)_getContentsOfAllFramesAsStringWithCompletionHandler:(void (^)(NSString *))completionHandler WK_API_AVAILABLE(macos(11.0), ios(14.0));
 - (void)_getContentsAsAttributedStringWithCompletionHandler:(void (^)(NSAttributedString *, NSDictionary<NSAttributedStringDocumentAttributeKey, id> *, NSError *))completionHandler WK_API_AVAILABLE(macos(10.15), ios(13.0));
 

@@ -203,6 +203,13 @@ void RemoteMediaPlayerProxy::setVideoLayerSizeFenced(const WebCore::FloatSize& s
     RELEASE_LOG(Media, "RemoteMediaPlayerProxy::setVideoLayerSizeFenced: send right %d, fence data size %lu", sendRightAnnotated.sendRight.sendRight(), sendRightAnnotated.data.size());
 
     ALWAYS_LOG(LOGIDENTIFIER, size.width(), "x", size.height());
+
+    // When the layer is hosted directly by the UI process, RemoteLayerHostingManager is the
+    // only thing that sizes it. The WebContent process only sends this to keep its own
+    // bookkeeping up to date, and must not affect the layer.
+    if (m_remoteVideoLayerSource)
+        return;
+
     m_layerHostingContextManager->setVideoLayerSizeFenced(size, WTF::MachSendRightAnnotated { sendRightAnnotated }, [&] {
         m_player->setVideoLayerSizeFenced(size, WTF::move(sendRightAnnotated));
     });

@@ -241,18 +241,15 @@ void RemoteLayerHostingManagerProxy::supersedeAndDetachGPUProcessSourcesForTesti
     process->sendWithAsyncReply(Messages::RemoteLayerHostingManager::SupersedeAndDetachSourcesForTesting(), WTF::move(completionHandler), 0);
 }
 
-String RemoteLayerHostingManagerProxy::gpuProcessRemoteLayerTreeAsTextForTesting()
+void RemoteLayerHostingManagerProxy::gpuProcessRemoteLayerTreeAsTextForTesting(CompletionHandler<void(String&&)>&& completionHandler)
 {
     RefPtr process = m_gpuProcess;
-    if (!process)
-        return { };
+    if (!process) {
+        completionHandler({ });
+        return;
+    }
 
-    auto sendResult = process->sendSync(Messages::RemoteLayerHostingManager::RemoteLayerTreeAsTextForTesting(), 0);
-    if (!sendResult.succeeded())
-        return "<no reply from GPU process>"_s;
-
-    auto [description] = sendResult.takeReply();
-    return description;
+    process->sendWithAsyncReply(Messages::RemoteLayerHostingManager::RemoteLayerTreeAsTextForTesting(), WTF::move(completionHandler), 0);
 }
 
 void RemoteLayerHostingManagerProxy::didCreateRemoteLayer(PlaybackSessionContextIdentifier identifier, WebCore::HostingContext&& hostingContext)
@@ -262,16 +259,23 @@ void RemoteLayerHostingManagerProxy::didCreateRemoteLayer(PlaybackSessionContext
     info.hasGPUProcessVideoLayer = true;
     applyHostingContextToLayerHost(info);
 
-    if (info.size.isEmpty())
-        return;
-
     RefPtr process = m_gpuProcess;
     if (!process)
         return;
 
-    runWithFenceForIdentifier(identifier, [&](auto&& fence) {
-        process->send(Messages::RemoteLayerHostingManager::SetRemoteLayerSizeFenced(identifier, info.size, WTF::move(fence)), 0);
-    });
+    // The GPU process creates the layer with its own idea of size and gravity, so
+    // re-send what the UI process last decided to keep the two from diverging.
+    if (!info.size.isEmpty()) {
+        runWithFenceForIdentifier(identifier, [&](auto&& fence) {
+            process->send(Messages::RemoteLayerHostingManager::SetRemoteLayerSizeFenced(identifier, info.size, WTF::move(fence)), 0);
+        });
+    }
+
+    if (!info.videoGravity.isNull()) {
+        runWithFenceForIdentifier(identifier, [&](auto&& fence) {
+            process->send(Messages::RemoteLayerHostingManager::SetRemoteLayerVideoGravityFenced(identifier, info.videoGravity, WTF::move(fence)), 0);
+        });
+    }
 }
 
 void RemoteLayerHostingManagerProxy::didRemoveRemoteLayer(PlaybackSessionContextIdentifier identifier)
@@ -328,7 +332,7 @@ void RemoteLayerHostingManagerProxy::runWithFenceForIdentifier(PlaybackSessionCo
 }
 
 #if USE(EXTENSIONKIT)
-void RemoteLayerHostingManagerProxy::addVisibilityPropogationView(PlaybackSessionContextIdentifier identifier)
+void RemoteLayerHostingManagerProxy::addVisibilityPropagationView(PlaybackSessionContextIdentifier identifier)
 {
     auto it = m_hostedLayers.find(identifier);
     if (it == m_hostedLayers.end())
@@ -350,7 +354,7 @@ void RemoteLayerHostingManagerProxy::addVisibilityPropogationView(PlaybackSessio
         [hostView setVisibilityPropagationView:newVisibilityPropagationView];
 }
 
-void RemoteLayerHostingManagerProxy::removeVisibilityPropogationView(PlaybackSessionContextIdentifier identifier)
+void RemoteLayerHostingManagerProxy::removeVisibilityPropagationView(PlaybackSessionContextIdentifier identifier)
 {
     auto it = m_hostedLayers.find(identifier);
     if (it == m_hostedLayers.end())
